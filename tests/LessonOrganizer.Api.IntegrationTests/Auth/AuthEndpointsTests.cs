@@ -10,6 +10,7 @@ namespace LessonOrganizer.Api.IntegrationTests.Auth;
 public sealed class AuthEndpointsTests(SqlServerFixture sql) : IAsyncLifetime
 {
     private const string Password = ApiClient.DemoPassword;
+    private const string XsrfProblemType = "urn:lesson-organizer:problem:invalid-xsrf-token";
 
     private ApiFactory _factory = null!;
 
@@ -42,8 +43,23 @@ public sealed class AuthEndpointsTests(SqlServerFixture sql) : IAsyncLifetime
         var http = _factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         var response = await http.PostAsJsonAsync("/api/auth/register", new { name = "Maria", email = "maria@example.com", password = Password }, Ct);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(XsrfProblemType, (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("type").GetString());
         await using var context = _factory.NewDbContext();
         Assert.Equal(0, await context.Users.CountAsync(Ct));
+    }
+
+    [Fact]
+    public async Task TokenFromBeforeLogin_IsRejectedAfterLoginWithXsrfType()
+    {
+        var client = await ApiClient.CreateAsync(_factory);
+        await client.RegisterAsync("Maria", "maria@example.com", Password);
+        var staleToken = client.Http.DefaultRequestHeaders.GetValues("X-XSRF-TOKEN").Single();
+        await client.LoginAsync("maria@example.com", Password);
+        client.Http.DefaultRequestHeaders.Remove("X-XSRF-TOKEN");
+        client.Http.DefaultRequestHeaders.Add("X-XSRF-TOKEN", staleToken);
+        var response = await client.Http.PostAsJsonAsync("/api/students", new { name = "Ana", englishLevel = "Beginner" }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(XsrfProblemType, (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("type").GetString());
     }
 
     [Fact]

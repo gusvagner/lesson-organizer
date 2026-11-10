@@ -6,6 +6,8 @@ namespace LessonOrganizer.Api.Security;
 
 public sealed class AntiforgeryValidationFilter(IAntiforgery antiforgery) : IAsyncAuthorizationFilter
 {
+    public const string ProblemType = "urn:lesson-organizer:problem:invalid-xsrf-token";
+
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         if (!IsUnsafe(context.HttpContext.Request.Method))
@@ -21,8 +23,9 @@ public sealed class AntiforgeryValidationFilter(IAntiforgery antiforgery) : IAsy
         {
             context.Result = new BadRequestObjectResult(new ProblemDetails
             {
+                Type = ProblemType,
                 Status = StatusCodes.Status400BadRequest,
-                Title = "Bad Request",
+                Title = "Invalid XSRF token",
                 Detail = "The XSRF token is missing or invalid. Call GET /api/auth/csrf and send the X-XSRF-TOKEN header.",
             });
         }

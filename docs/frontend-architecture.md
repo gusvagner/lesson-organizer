@@ -124,6 +124,8 @@ Top `mat-toolbar` inside the shell: app name, "Lesson plans", "Students", and a 
 - On app start, an initializer calls `GET /api/auth/csrf` (sets the `XSRF-TOKEN` cookie) and then `GET /api/auth/me` to restore the session. 401 there means "not logged in", not an error.
 - `HttpClient` sends the token as `X-XSRF-TOKEN` on unsafe requests (`withXsrfConfiguration`).
 - After login and after logout, the app calls `/api/auth/csrf` again, because antiforgery tokens are tied to the user.
+- Before every login and register, and after any 401, the app also calls `/api/auth/csrf`: a token issued while a session existed is refused once that session expires or ends in another tab.
+- A 400 whose ProblemDetails `type` is `urn:lesson-organizer:problem:invalid-xsrf-token` means a stale token: the interceptor fetches a new one and retries the request once; a second failure is shown as the generic error.
 - Logout: `POST /api/auth/logout`, then a full page load of `/login`. This drops every store's state, so the next teacher never sees the previous teacher's data, not even for a moment.
 
 ## UI states
