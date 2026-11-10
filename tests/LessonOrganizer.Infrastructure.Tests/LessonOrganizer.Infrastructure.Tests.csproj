@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Testcontainers.MsSql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../src/LessonOrganizer.Infrastructure/LessonOrganizer.Infrastructure.csproj" />
   </ItemGroup>
 
