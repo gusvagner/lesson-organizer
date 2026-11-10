@@ -22,9 +22,18 @@ Verified on 2026-11-10 with `dotnet --list-sdks` (6.0.428, 9.0.311, 10.0.403) an
   "sdk": {
     "version": "10.0.403",
     "rollForward": "latestFeature"
+  },
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
   }
 }
 ```
+
+`test.runner` makes `dotnet test` use Microsoft Testing Platform (MTP). xUnit v3 4.x runs only on MTP: with the .NET 10 SDK the old VSTest path fails, and VSTest with `xunit.runner.visualstudio` finds no tests (checked on 2026-11-10).
+
+### Package source
+
+`nuget.config` at the root clears every machine-level source and keeps only nuget.org, so no company feed is used by this project.
 
 ### `Directory.Build.props` (every project)
 
@@ -47,10 +56,8 @@ Exact versions are pinned in `Directory.Packages.props` when each package is add
 
 | Package | Used by | Why |
 |---|---|---|
-| `xunit.v3` | all test projects | Test framework. |
-| `xunit.runner.visualstudio` | all test projects | Runs xUnit through `dotnet test` and the IDE. |
-| `Microsoft.NET.Test.Sdk` | all test projects | Test host for `dotnet test`. |
-| `coverlet.collector` | all test projects | Coverage data for `dotnet test --collect:"XPlat Code Coverage"`. The exercise asks for "sufficient test coverage". |
+| `xunit.v3` 4.0.1 | all test projects (via `tests/Directory.Build.props`) | Test framework; each test project is an executable on Microsoft Testing Platform, so no `Microsoft.NET.Test.Sdk` or `xunit.runner.visualstudio`. |
+| Coverage extension for MTP (`Microsoft.Testing.Extensions.CodeCoverage`, version to be given by the human) | all test projects | The exercise asks for "sufficient test coverage". `coverlet.collector` works only with VSTest; the cached `Microsoft.Testing.Extensions.CodeCoverage` 18.0.4 crashes on the MTP 2.4 used by xUnit v3 4.0.1 (`TypeLoadException` on `OnTestSessionStartingAsync`). Added before the coverage step of plan 1, Task 8. |
 | `Microsoft.AspNetCore.Mvc.Testing` (10.0.x) | `Api.IntegrationTests` | `WebApplicationFactory`: runs the real API in memory for HTTP tests. |
 | `Microsoft.EntityFrameworkCore.SqlServer` (10.0.x) | `Infrastructure` | EF Core and its SQL Server provider: the data access layer ([ADR 0003](decisions/0003-sql-server-ef-core-docker.md)). |
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` (10.0.x) | `Infrastructure` | Identity's EF Core stores: users table, password hashing, lockout, security stamp. |
@@ -118,9 +125,9 @@ Filled in at stage 0, once the solution exists, and copied to `CLAUDE.md` and th
 | Task | Command |
 |---|---|
 | Build | `dotnet build` |
-| All tests (Docker running) | `dotnet test` |
+| All tests (Docker running) | `dotnet test` (MTP; exit code 8 means zero tests ran) |
 | Unit tests only, without Docker | `dotnet test --filter "FullyQualifiedName!~Infrastructure.Tests&FullyQualifiedName!~IntegrationTests"` |
-| Coverage | `dotnet test --collect:"XPlat Code Coverage"` |
+| Coverage (once the coverage extension is added) | `dotnet test --coverage --coverage-output-format cobertura` |
 | Restore local tools | `dotnet tool restore` |
 | Add a migration | `dotnet ef migrations add <Name> --project src/LessonOrganizer.Infrastructure --output-dir Persistence/Migrations` |
 | Apply migrations by hand (the app applies them at startup when `Database:MigrateOnStartup` is true) | `dotnet ef database update --project src/LessonOrganizer.Infrastructure` with `ConnectionStrings__LessonOrganizer` set |

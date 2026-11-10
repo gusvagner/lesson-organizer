@@ -27,13 +27,14 @@ Items marked *(planned)* do not exist yet; create them in the stage listed in `d
 ```
 lesson-organizer/
 ├── CLAUDE.md                     # this file: context and rules for AI agents
-├── README.md                     # (planned) pitch, setup, run, tests, demo credentials
+├── README.md                     # pitch, setup, run, tests, demo credentials
 ├── .gitignore
-├── .editorconfig                 # (planned)
-├── global.json                   # (planned) pins .NET SDK 10.0.403
-├── Directory.Build.props         # (planned) nullable, warnings as errors, net10.0
-├── Directory.Packages.props      # (planned) central package versions
-├── LessonOrganizer.slnx          # (planned)
+├── .editorconfig                 # code style checked by dotnet build
+├── global.json                   # pins .NET SDK 10.0.403
+├── Directory.Build.props         # nullable, warnings as errors, net10.0
+├── Directory.Packages.props      # central package versions
+├── nuget.config                  # nuget.org only, no company feeds
+├── LessonOrganizer.slnx          # solution
 ├── .config/dotnet-tools.json     # (planned) local tools: dotnet-ef
 ├── docker-compose.yml            # (planned) db (SQL Server) + app (API serving Angular)
 ├── Dockerfile                    # (planned) multi-stage: Angular build, .NET publish, ASP.NET runtime
@@ -55,13 +56,13 @@ lesson-organizer/
 │       │   └── 01-planning.md
 │       └── genai-exercise.md     # (planned) answer to the exercise's GenAI section
 │
-├── src/                          # (planned)
+├── src/                          #
 │   ├── LessonOrganizer.Domain/          # entities, enums, invariants; no dependencies
 │   ├── LessonOrganizer.Application/     # use cases, contracts, repository interfaces
 │   ├── LessonOrganizer.Infrastructure/  # EF Core DbContext, migrations, repositories, Identity, seed
 │   └── LessonOrganizer.Api/             # controllers, auth config, composition root
 │
-├── tests/                        # (planned), mirrors src/
+├── tests/                        # mirrors src/
 │   ├── LessonOrganizer.Domain.Tests/
 │   ├── LessonOrganizer.Application.Tests/
 │   ├── LessonOrganizer.Infrastructure.Tests/    # repositories against SQL Server (Testcontainers)
@@ -102,4 +103,12 @@ Reusable prompts go in `docs/ai/prompts/NN-short-title.md`.
 
 ## Commands
 
-Filled in during stage 0, once the solution exists.
+| Task | Command |
+|---|---|
+| Build | `dotnet build` |
+| All tests | `dotnet test` (Microsoft Testing Platform, set in `global.json`) |
+| One test project | `dotnet test --project tests/LessonOrganizer.Domain.Tests` |
+| Run API | `dotnet run --project src/LessonOrganizer.Api` |
+| Format | `dotnet format` |
+
+Migration, database and Docker commands are added when their stage lands (see `docs/stack.md` "Commands").

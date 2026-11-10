@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../LessonOrganizer.Application/LessonOrganizer.Application.csproj" />
+  </ItemGroup>
+
+</Project>
