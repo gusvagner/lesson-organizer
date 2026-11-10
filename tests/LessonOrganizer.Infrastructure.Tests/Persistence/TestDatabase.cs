@@ -11,6 +11,7 @@ public sealed class TestDatabase : IAsyncDisposable
 
     private TestDatabase(string connectionString)
     {
+        ConnectionString = connectionString;
         _options = new DbContextOptionsBuilder<LessonOrganizerDbContext>().UseSqlServer(connectionString).Options;
     }
 
@@ -21,6 +22,8 @@ public sealed class TestDatabase : IAsyncDisposable
         await context.Database.MigrateAsync();
         return database;
     }
+
+    public string ConnectionString { get; }
 
     public LessonOrganizerDbContext NewContext() => new(_options);
 

@@ -10,6 +10,7 @@ public class InfrastructureServiceCollectionExtensionsTests
     public void AddInfrastructure_RegistersScopedRepositories()
     {
         using var provider = new ServiceCollection()
+            .AddLogging()
             .AddInfrastructure("Server=localhost;Database=unused;TrustServerCertificate=true")
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         using var scope = provider.CreateScope();
