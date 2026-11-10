@@ -133,7 +133,7 @@ Filled in at stage 0, once the solution exists, and copied to `CLAUDE.md` and th
 | Add a migration | `dotnet ef migrations add <Name> --project src/LessonOrganizer.Infrastructure --output-dir Persistence/Migrations` |
 | Apply migrations by hand (the app applies them at startup when `Database:MigrateOnStartup` is true) | `dotnet ef database update --project src/LessonOrganizer.Infrastructure` with `ConnectionStrings__LessonOrganizer` set |
 | Database for development | `docker compose up -d db` |
-| Connection string for development | `dotnet user-secrets set ConnectionStrings:LessonOrganizer "<value>" --project src/LessonOrganizer.Api` |
+| Connection string for development | `dotnet user-secrets set ConnectionStrings:LessonOrganizer "Server=127.0.0.1,1433;Database=LessonOrganizer;User Id=sa;Password=<.env value>;TrustServerCertificate=true" --project src/LessonOrganizer.Api` (use `127.0.0.1`, not `localhost`: Docker publishes the port on IPv4 only and SqlClient may try `::1` first and time out) |
 | Run API | `dotnet run --project src/LessonOrganizer.Api` |
 | Whole demo | `docker compose up --build` → `http://localhost:8080` |
 | Reset demo data | `docker compose down -v` |

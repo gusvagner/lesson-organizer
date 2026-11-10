@@ -44,10 +44,18 @@ public sealed class ApiClient
     public async Task RefreshCsrfAsync()
     {
         var response = await Http.GetAsync("/api/auth/csrf");
-        var cookie = response.Headers.GetValues("Set-Cookie").Single(value => value.StartsWith(XsrfCookiePrefix, StringComparison.Ordinal));
+        var cookie = XsrfCookie(response);
         var token = Uri.UnescapeDataString(cookie[XsrfCookiePrefix.Length..].Split(';')[0]);
         Http.DefaultRequestHeaders.Remove(XsrfHeader);
         Http.DefaultRequestHeaders.Add(XsrfHeader, token);
+    }
+
+    private static string XsrfCookie(HttpResponseMessage response)
+    {
+        var cookies = response.Headers.TryGetValues("Set-Cookie", out var values) ? values.ToList() : [];
+        return cookies.SingleOrDefault(value => value.StartsWith(XsrfCookiePrefix, StringComparison.Ordinal))
+            ?? throw new InvalidOperationException(
+                $"GET /api/auth/csrf returned {(int)response.StatusCode} with cookies [{string.Join(" | ", cookies)}]. Expected 204 with an XSRF-TOKEN cookie.");
     }
 
     public Task<HttpResponseMessage> RegisterAsync(string name, string email, string password) =>

@@ -6,6 +6,7 @@ using LessonOrganizer.Domain.Common;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LessonOrganizer.Api.Controllers;
 
@@ -31,6 +32,7 @@ public sealed class AuthController(AuthService auth, IAuthSession session, ICurr
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     [AllowAnonymous]
     public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
     {
@@ -41,6 +43,7 @@ public sealed class AuthController(AuthService auth, IAuthSession session, ICurr
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     [AllowAnonymous]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {

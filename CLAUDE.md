@@ -113,5 +113,7 @@ Reusable prompts go in `docs/ai/prompts/NN-short-title.md`.
 | Restore local tools | `dotnet tool restore` |
 | Add a migration | `dotnet ef migrations add <Name> --project src/LessonOrganizer.Infrastructure --output-dir Persistence/Migrations` |
 | Database for development | `docker compose up -d db` (copy `.env.example` to `.env` first) |
+| Connection string for development | `dotnet user-secrets set ConnectionStrings:LessonOrganizer "Server=127.0.0.1,1433;Database=LessonOrganizer;User Id=sa;Password=<.env value>;TrustServerCertificate=true" --project src/LessonOrganizer.Api` |
+| Run API (applies migrations in Development) | `dotnet run --project src/LessonOrganizer.Api --launch-profile https` → `https://localhost:7141` |
 
 Tests in `Infrastructure.Tests` start their own SQL Server container: Docker must be running.
