@@ -2,9 +2,11 @@ using LessonOrganizer.Application.Abstractions;
 using LessonOrganizer.Infrastructure.Identity;
 using LessonOrganizer.Infrastructure.Persistence;
 using LessonOrganizer.Infrastructure.Repositories;
+using LessonOrganizer.Infrastructure.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LessonOrganizer.Infrastructure;
 
@@ -20,6 +22,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ILessonPlanRepository, EfLessonPlanRepository>();
         services.AddIdentityCore<ApplicationUser>(ConfigureIdentity).AddEntityFrameworkStores<LessonOrganizerDbContext>();
         services.AddScoped<IUserAccounts, IdentityUserAccounts>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<DemoDataSeeder>();
         return services;
     }
 

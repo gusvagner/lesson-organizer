@@ -31,7 +31,7 @@ public sealed class SeededDemoTests(SqlServerFixture sql) : IAsyncLifetime
     {
         var john = await LoggedInAsync("john@example.com");
         Assert.Equal(["David", "Emma"], await NamesAsync(john, "/api/students", "name"));
-        Assert.All(await NamesAsync(john, "/api/lesson-plans", "studentName"), name => Assert.Contains(name, new[] { "David", "Emma" }));
+        Assert.Equal(["David", "Emma", "David"], await NamesAsync(john, "/api/lesson-plans", "studentName"));
     }
 
     [Fact]
