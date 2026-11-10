@@ -50,6 +50,17 @@ public sealed class ApiClient
         Http.DefaultRequestHeaders.Add(XsrfHeader, token);
     }
 
+    private static async Task<Guid> CreatedIdAsync(HttpResponseMessage response, string request)
+    {
+        if (response.StatusCode != HttpStatusCode.Created)
+        {
+            throw new InvalidOperationException(
+                $"{request} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}. Expected 201.");
+        }
+
+        return (await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>()).GetProperty("id").GetGuid();
+    }
+
     private static string XsrfCookie(HttpResponseMessage response)
     {
         var cookies = response.Headers.TryGetValues("Set-Cookie", out var values) ? values.ToList() : [];
@@ -70,6 +81,12 @@ public sealed class ApiClient
         }
 
         return response;
+    }
+
+    public async Task<Guid> CreateStudentAsync(string name)
+    {
+        var response = await Http.PostAsJsonAsync("/api/students", new { name, englishLevel = "Intermediate" });
+        return await CreatedIdAsync(response, $"POST /api/students for {name}");
     }
 
     public async Task<HttpResponseMessage> LogoutAsync()
