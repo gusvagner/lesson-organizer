@@ -1,0 +1,33 @@
+# Original exercise statement (not redistributed)
+docs/Net - BLA - Technical Interview Exercise - V6 (1).pdf
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.coverage
+coverage*.xml
+appsettings.*.local.json
+
+# Angular / Node
+node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+npm-debug.log*
+
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
