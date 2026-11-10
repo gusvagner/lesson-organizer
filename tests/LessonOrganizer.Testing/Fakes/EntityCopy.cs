@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace LessonOrganizer.Application.Tests.Fakes;
+namespace LessonOrganizer.Testing.Fakes;
 
 public static class EntityCopy
 {

@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/LessonOrganizer.Application/LessonOrganizer.Application.csproj" />
+    <ProjectReference Include="../LessonOrganizer.Testing/LessonOrganizer.Testing.csproj" />
   </ItemGroup>
 
 </Project>

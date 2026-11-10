@@ -2,7 +2,7 @@ using LessonOrganizer.Application.Abstractions;
 using LessonOrganizer.Application.LessonPlans;
 using LessonOrganizer.Domain.LessonPlans;
 
-namespace LessonOrganizer.Application.Tests.Fakes;
+namespace LessonOrganizer.Testing.Fakes;
 
 public sealed class InMemoryLessonPlanRepository(InMemoryData data) : ILessonPlanRepository
 {

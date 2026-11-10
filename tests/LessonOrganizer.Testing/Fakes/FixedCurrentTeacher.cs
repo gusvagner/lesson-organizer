@@ -1,6 +1,6 @@
 using LessonOrganizer.Application.Abstractions;
 
-namespace LessonOrganizer.Application.Tests.Fakes;
+namespace LessonOrganizer.Testing.Fakes;
 
 public sealed class FixedCurrentTeacher(Guid id) : ICurrentTeacher
 {

@@ -1,5 +1,5 @@
 using LessonOrganizer.Application.Students;
-using LessonOrganizer.Application.Tests.Fakes;
+using LessonOrganizer.Testing.Fakes;
 using LessonOrganizer.Domain.Common;
 using LessonOrganizer.Domain.LessonPlans;
 using LessonOrganizer.Domain.Students;

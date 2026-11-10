@@ -1,10 +1,8 @@
-using LessonOrganizer.Infrastructure.Tests.Persistence;
-using Microsoft.Data.SqlClient;
+using System.Data.Common;
 using Testcontainers.MsSql;
+using Xunit;
 
-[assembly: AssemblyFixture(typeof(SqlServerFixture))]
-
-namespace LessonOrganizer.Infrastructure.Tests.Persistence;
+namespace LessonOrganizer.Testing.SqlServer;
 
 public sealed class SqlServerFixture : IAsyncLifetime
 {
@@ -12,8 +10,13 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     private readonly MsSqlContainer _container = new MsSqlBuilder(Image).Build();
 
-    public string ConnectionStringFor(string database) =>
-        new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = database }.ConnectionString;
+    public string ConnectionStringFor(string database)
+    {
+        var builder = new DbConnectionStringBuilder { ConnectionString = _container.GetConnectionString() };
+        builder.Remove("Initial Catalog");
+        builder["Database"] = database;
+        return builder.ConnectionString;
+    }
 
     public async ValueTask InitializeAsync() => await _container.StartAsync();
 

@@ -1,3 +1,4 @@
+using LessonOrganizer.Testing.Fakes;
 using LessonOrganizer.Domain.LessonPlans;
 using LessonOrganizer.Domain.Students;
 

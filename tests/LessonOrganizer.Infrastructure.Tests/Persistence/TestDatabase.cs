@@ -1,3 +1,4 @@
+using LessonOrganizer.Testing.SqlServer;
 using LessonOrganizer.Infrastructure.Identity;
 using LessonOrganizer.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
