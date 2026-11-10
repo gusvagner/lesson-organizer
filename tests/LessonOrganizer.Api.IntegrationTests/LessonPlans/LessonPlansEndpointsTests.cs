@@ -58,8 +58,9 @@ public sealed class LessonPlansEndpointsTests(SqlServerFixture sql) : IAsyncLife
         var foreign = await a.Http.PostAsJsonAsync("/api/lesson-plans", Plan(bStudent, "Review", "2026-11-12"), Ct);
         var missing = await a.Http.PostAsJsonAsync("/api/lesson-plans", Plan(Guid.CreateVersion7(), "Review", "2026-11-12"), Ct);
         Assert.Equal((HttpStatusCode.BadRequest, HttpStatusCode.BadRequest), (foreign.StatusCode, missing.StatusCode));
-        Assert.Equal(await StudentIdErrorsAsync(foreign), await StudentIdErrorsAsync(missing));
-        Assert.Equal("[\"Student not found.\"]", await StudentIdErrorsAsync(foreign));
+        var foreignErrors = await StudentIdErrorsAsync(foreign);
+        Assert.Equal(foreignErrors, await StudentIdErrorsAsync(missing));
+        Assert.Equal("[\"Student not found.\"]", foreignErrors);
     }
 
     [Fact]
