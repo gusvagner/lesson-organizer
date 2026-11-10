@@ -89,6 +89,12 @@ public sealed class ApiClient
         return await CreatedIdAsync(response, $"POST /api/students for {name}");
     }
 
+    public async Task<Guid> CreateLessonPlanAsync(Guid studentId, string title, string lessonDate)
+    {
+        var response = await Http.PostAsJsonAsync("/api/lesson-plans", new { studentId, title, lessonDate });
+        return await CreatedIdAsync(response, $"POST /api/lesson-plans for {title}");
+    }
+
     public async Task<HttpResponseMessage> LogoutAsync()
     {
         var response = await Http.PostAsync("/api/auth/logout", null);
