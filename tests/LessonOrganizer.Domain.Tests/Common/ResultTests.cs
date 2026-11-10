@@ -30,4 +30,8 @@ public class ResultTests
 
     [Fact]
     public void ValueSuccess_ReturnsValue() => Assert.Equal(42, Result<int>.Success(42).Value);
+
+    [Fact]
+    public void Unauthorized_HasKindUnauthorized() =>
+        Assert.Equal(new Error(ErrorKind.Unauthorized, "Invalid email or password."), Error.Unauthorized("Invalid email or password."));
 }
