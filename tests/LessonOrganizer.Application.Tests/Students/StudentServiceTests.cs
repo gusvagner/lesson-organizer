@@ -113,7 +113,7 @@ public class StudentServiceTests
         var ana = await SeedStudentAsync(TeacherA, "Ana");
         var result = await ServiceFor(TeacherB).UpdateAsync(ana.Id, Request("Hacked"), Ct);
         Assert.Equal(Error.NotFound("Student not found."), Assert.Single(result.Errors));
-        Assert.Equal("Ana", ana.Name);
+        Assert.Equal("Ana", _data.Students.Single().Name);
     }
 
     [Fact]
@@ -134,6 +134,7 @@ public class StudentServiceTests
         var result = await ServiceFor(TeacherA).UpdateAsync(ana.Id, new StudentRequest("Ana Maria", "ana@example.com", EnglishLevel.Advanced, "Notes"), Ct);
         Assert.Equal("Ana Maria", result.Value.Name);
         Assert.Equal("ana@example.com", result.Value.Email);
+        Assert.Equal("Ana Maria", _data.Students.Single().Name);
     }
 
     [Fact]

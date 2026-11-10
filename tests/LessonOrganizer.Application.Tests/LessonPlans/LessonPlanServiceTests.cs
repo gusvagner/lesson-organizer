@@ -86,7 +86,7 @@ public class LessonPlanServiceTests
         var plan = await SeedLessonPlanAsync(ana.Id, "Review");
         var result = await ServiceFor(TeacherA).UpdateAsync(plan.Id, Request(bruno.Id), Ct);
         Assert.Equal("Bruno", result.Value.StudentName);
-        Assert.Equal(bruno.Id, plan.StudentId);
+        Assert.Equal(bruno.Id, StoredPlan(plan.Id).StudentId);
     }
 
     [Fact]
@@ -97,18 +97,30 @@ public class LessonPlanServiceTests
         var plan = await SeedLessonPlanAsync(ana.Id, "Review");
         var result = await ServiceFor(TeacherA).UpdateAsync(plan.Id, Request(bStudent.Id), Ct);
         Assert.Equal(StudentNotFound, Assert.Single(result.Errors));
-        Assert.Equal(ana.Id, plan.StudentId);
+        Assert.Equal(ana.Id, StoredPlan(plan.Id).StudentId);
+    }
+
+    [Fact]
+    public async Task Update_InvalidTitle_ReturnsErrorAndKeepsStored()
+    {
+        var ana = await SeedStudentAsync(TeacherA, "Ana");
+        var bruno = await SeedStudentAsync(TeacherA, "Bruno");
+        var plan = await SeedLessonPlanAsync(ana.Id, "Review");
+        var request = new LessonPlanRequest(bruno.Id, new string('t', 151), "New description", Today.AddDays(5));
+        var result = await ServiceFor(TeacherA).UpdateAsync(plan.Id, request, Ct);
+        Assert.Equal("title", Assert.Single(result.Errors).Field);
+        var stored = StoredPlan(plan.Id);
+        Assert.Equal((ana.Id, "Review", (string?)null, Today), (stored.StudentId, stored.Title, stored.Description, stored.LessonDate));
     }
 
     [Fact]
     public async Task Update_DoesNotChangeStatus()
     {
         var ana = await SeedStudentAsync(TeacherA, "Ana");
-        var plan = await SeedLessonPlanAsync(ana.Id, "Review");
-        plan.ChangeStatus(LessonPlanStatus.Ready);
+        var plan = await SeedLessonPlanAsync(ana.Id, "Review", status: LessonPlanStatus.Ready);
         var result = await ServiceFor(TeacherA).UpdateAsync(plan.Id, Request(ana.Id, "New title"), Ct);
         Assert.Equal(LessonPlanStatus.Ready, result.Value.Status);
-        Assert.Equal("New title", result.Value.Title);
+        Assert.Equal("New title", StoredPlan(plan.Id).Title);
     }
 
     [Fact]
@@ -132,6 +144,15 @@ public class LessonPlanServiceTests
     }
 
     [Fact]
+    public async Task ChangeStatus_OwnPlan_SavesStatus()
+    {
+        var ana = await SeedStudentAsync(TeacherA, "Ana");
+        var plan = await SeedLessonPlanAsync(ana.Id, "Review");
+        await ServiceFor(TeacherA).ChangeStatusAsync(plan.Id, new ChangeLessonPlanStatusRequest(LessonPlanStatus.Delivered), Ct);
+        Assert.Equal(LessonPlanStatus.Delivered, StoredPlan(plan.Id).Status);
+    }
+
+    [Fact]
     public async Task ChangeStatus_MissingStatus_ReturnsStatusRequired()
     {
         var ana = await SeedStudentAsync(TeacherA, "Ana");
@@ -147,7 +168,7 @@ public class LessonPlanServiceTests
         var plan = await SeedLessonPlanAsync(bStudent.Id, "Review");
         var result = await ServiceFor(TeacherA).ChangeStatusAsync(plan.Id, new ChangeLessonPlanStatusRequest(LessonPlanStatus.Ready), Ct);
         Assert.Equal(PlanNotFound, Assert.Single(result.Errors));
-        Assert.Equal(LessonPlanStatus.ToPrepare, plan.Status);
+        Assert.Equal(LessonPlanStatus.ToPrepare, _data.LessonPlans.Single().Status);
     }
 
     [Fact]
@@ -166,11 +187,9 @@ public class LessonPlanServiceTests
     {
         var ana = await SeedStudentAsync(TeacherA, "Ana");
         var bruno = await SeedStudentAsync(TeacherA, "Bruno");
-        var ready = await SeedLessonPlanAsync(ana.Id, "Ana ready");
-        ready.ChangeStatus(LessonPlanStatus.Ready);
+        await SeedLessonPlanAsync(ana.Id, "Ana ready", status: LessonPlanStatus.Ready);
         await SeedLessonPlanAsync(ana.Id, "Ana to prepare");
-        var brunoReady = await SeedLessonPlanAsync(bruno.Id, "Bruno ready");
-        brunoReady.ChangeStatus(LessonPlanStatus.Ready);
+        await SeedLessonPlanAsync(bruno.Id, "Bruno ready", status: LessonPlanStatus.Ready);
         var list = await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(ana.Id, LessonPlanStatus.Ready), Ct);
         Assert.Equal(["Ana ready"], list.Select(plan => plan.Title));
     }
@@ -217,10 +236,15 @@ public class LessonPlanServiceTests
         return student;
     }
 
-    private async Task<LessonPlan> SeedLessonPlanAsync(Guid studentId, string title, DateOnly? date = null)
+    private async Task<LessonPlan> SeedLessonPlanAsync(
+        Guid studentId, string title, DateOnly? date = null, LessonPlanStatus status = LessonPlanStatus.ToPrepare)
     {
         var plan = LessonPlan.Create(studentId, title, null, date ?? Today).Value;
+        plan.ChangeStatus(status);
         await _lessonPlans.AddAsync(plan, Ct);
         return plan;
     }
+
+    private LessonPlan StoredPlan(Guid id) => _data.LessonPlans.Single(plan => plan.Id == id);
+
 }

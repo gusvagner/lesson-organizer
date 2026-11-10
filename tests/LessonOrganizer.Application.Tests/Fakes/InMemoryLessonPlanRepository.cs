@@ -9,26 +9,29 @@ public sealed class InMemoryLessonPlanRepository(InMemoryData data) : ILessonPla
     public Task AddAsync(LessonPlan plan, CancellationToken ct)
     {
         EnsureStudentExists(plan);
-        data.LessonPlans.Add(plan);
+        data.LessonPlans.Add(EntityCopy.Of(plan));
         return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<LessonPlan>> ListByTeacherAsync(Guid teacherId, LessonPlanFilter filter, CancellationToken ct)
     {
-        var ownStudentIds = data.Students.Where(student => student.TeacherId == teacherId).Select(student => student.Id).ToHashSet();
         IReadOnlyList<LessonPlan> plans = data.LessonPlans
-            .Where(plan => ownStudentIds.Contains(plan.StudentId))
+            .Where(plan => IsOwnedBy(plan, teacherId))
             .Where(plan => filter.StudentId is null || plan.StudentId == filter.StudentId)
             .Where(plan => filter.Status is null || plan.Status == filter.Status)
             .OrderBy(plan => plan.LessonDate)
             .ThenBy(plan => plan.Title, StringComparer.OrdinalIgnoreCase)
             .ThenBy(plan => plan.Id)
+            .Select(EntityCopy.Of)
             .ToList();
         return Task.FromResult(plans);
     }
 
-    public Task<LessonPlan?> GetOwnedAsync(Guid id, Guid teacherId, CancellationToken ct) =>
-        Task.FromResult(data.LessonPlans.SingleOrDefault(plan => plan.Id == id && IsOwnedBy(plan, teacherId)));
+    public Task<LessonPlan?> GetOwnedAsync(Guid id, Guid teacherId, CancellationToken ct)
+    {
+        var stored = data.LessonPlans.SingleOrDefault(plan => plan.Id == id && IsOwnedBy(plan, teacherId));
+        return Task.FromResult(stored is null ? null : EntityCopy.Of(stored));
+    }
 
     public Task<IReadOnlyDictionary<Guid, int>> CountByStudentsAsync(IReadOnlyCollection<Guid> studentIds, CancellationToken ct)
     {
@@ -41,6 +44,13 @@ public sealed class InMemoryLessonPlanRepository(InMemoryData data) : ILessonPla
     public Task UpdateAsync(LessonPlan plan, CancellationToken ct)
     {
         EnsureStudentExists(plan);
+        var index = data.LessonPlans.FindIndex(stored => stored.Id == plan.Id);
+        if (index < 0)
+        {
+            throw new InvalidOperationException($"Lesson plan {plan.Id} does not exist. Expected an existing lesson plan id.");
+        }
+
+        data.LessonPlans[index] = EntityCopy.Of(plan);
         return Task.CompletedTask;
     }
 

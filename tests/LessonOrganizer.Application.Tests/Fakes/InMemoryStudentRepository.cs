@@ -7,7 +7,7 @@ public sealed class InMemoryStudentRepository(InMemoryData data) : IStudentRepos
 {
     public Task AddAsync(Student student, CancellationToken ct)
     {
-        data.Students.Add(student);
+        data.Students.Add(EntityCopy.Of(student));
         return Task.CompletedTask;
     }
 
@@ -19,20 +19,26 @@ public sealed class InMemoryStudentRepository(InMemoryData data) : IStudentRepos
                 || student.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
             .OrderBy(student => student.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(student => student.Id)
+            .Select(EntityCopy.Of)
             .ToList();
         return Task.FromResult(students);
     }
 
-    public Task<Student?> GetOwnedAsync(Guid id, Guid teacherId, CancellationToken ct) =>
-        Task.FromResult(data.Students.SingleOrDefault(student => student.Id == id && student.TeacherId == teacherId));
+    public Task<Student?> GetOwnedAsync(Guid id, Guid teacherId, CancellationToken ct)
+    {
+        var stored = data.Students.SingleOrDefault(student => student.Id == id && student.TeacherId == teacherId);
+        return Task.FromResult(stored is null ? null : EntityCopy.Of(stored));
+    }
 
     public Task UpdateAsync(Student student, CancellationToken ct)
     {
-        if (!data.Students.Contains(student))
+        var index = data.Students.FindIndex(stored => stored.Id == student.Id);
+        if (index < 0)
         {
-            throw new InvalidOperationException($"Student {student.Id} does not exist. Expected an existing student.");
+            throw new InvalidOperationException($"Student {student.Id} does not exist. Expected an existing student id.");
         }
 
+        data.Students[index] = EntityCopy.Of(student);
         return Task.CompletedTask;
     }
 
