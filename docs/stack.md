@@ -58,7 +58,7 @@ Exact versions are pinned in `Directory.Packages.props` when each package is add
 |---|---|---|
 | `xunit.v3` 4.0.1 | all test projects (via `tests/Directory.Build.props`) | Test framework; each test project is an executable on Microsoft Testing Platform, so no `Microsoft.NET.Test.Sdk` or `xunit.runner.visualstudio`. |
 | Coverage extension for MTP (`Microsoft.Testing.Extensions.CodeCoverage`, version to be given by the human) | all test projects | The exercise asks for "sufficient test coverage". `coverlet.collector` works only with VSTest; the cached `Microsoft.Testing.Extensions.CodeCoverage` 18.0.4 crashes on the MTP 2.4 used by xUnit v3 4.0.1 (`TypeLoadException` on `OnTestSessionStartingAsync`). Added before the coverage step of plan 1, Task 8. |
-| `Microsoft.AspNetCore.Mvc.Testing` (10.0.x) | `Api.IntegrationTests` | `WebApplicationFactory`: runs the real API in memory for HTTP tests. |
+| `Microsoft.AspNetCore.Mvc.Testing` 10.0.9 | `Api.IntegrationTests` | `WebApplicationFactory`: runs the real API in memory for HTTP tests. |
 | `Microsoft.EntityFrameworkCore.SqlServer` 10.0.9 | `Infrastructure` | EF Core and its SQL Server provider: the data access layer ([ADR 0003](decisions/0003-sql-server-ef-core-docker.md)). |
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10.0.9 | `Infrastructure` | Identity's EF Core stores: users table, password hashing, lockout, security stamp. |
 | `Microsoft.EntityFrameworkCore.Design` 10.0.9 (`PrivateAssets=all`) | `Infrastructure` | Lets `dotnet ef` create migrations, using a design-time `DbContext` factory in Infrastructure, so the Api is not needed as startup project. Not shipped at runtime. |
@@ -71,12 +71,12 @@ Tool (local manifest `.config/dotnet-tools.json`, restored with `dotnet tool res
 |---|---|
 | `dotnet-ef` 10.0.9 | `dotnet ef migrations add`, `dotnet ef database update`. A local tool, so everyone uses the same version. |
 
-*(Optional, needs a yes before it is added)*
+API documentation (approved by the human on 2026-11-10; `Scalar.AspNetCore` version taken from nuget.org with their approval):
 
 | Package | Used by | Why |
 |---|---|---|
-| `Microsoft.AspNetCore.OpenApi` (10.0.x) | `Api` | Generates the OpenAPI document of the endpoints. |
-| `Scalar.AspNetCore` | `Api`, Development only | Browser UI over that document, to show and call the API during the presentation. |
+| `Microsoft.AspNetCore.OpenApi` 10.0.12 | `Api` | Generates the OpenAPI document of the endpoints (`/openapi/v1.json`, Development only). |
+| `Scalar.AspNetCore` 2.20.0 | `Api`, Development only (`/scalar`) | Browser UI over that document, to show and call the API during the presentation. |
 
 ## Built-in features used instead of packages
 

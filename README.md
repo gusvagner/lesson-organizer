@@ -39,7 +39,16 @@ To be written in stage 12. See [docs/architecture.md](docs/architecture.md).
 
 ## API
 
-To be written in stage 7. See [docs/plan.md §5](docs/plan.md#5-api-contracts).
+JSON over HTTPS, cookie session, errors as RFC 9457 ProblemDetails. Full contracts in [docs/plan.md §5](docs/plan.md#5-api-contracts). In Development, the OpenAPI document is at `/openapi/v1.json` and the Scalar UI at `/scalar`.
+
+| Area | Endpoints | Auth |
+|---|---|---|
+| Auth | `GET /api/auth/csrf`, `POST /api/auth/register`, `POST /api/auth/login` | public |
+| Auth | `POST /api/auth/logout`, `GET /api/auth/me` | session |
+| Students | `GET /api/students?search=`, `GET/PUT/DELETE /api/students/{id}`, `POST /api/students` | session |
+| Lesson plans | `GET /api/lesson-plans?studentId=&status=`, `GET/PUT/DELETE /api/lesson-plans/{id}`, `POST /api/lesson-plans`, `PATCH /api/lesson-plans/{id}/status` | session |
+
+Unsafe requests (POST, PUT, PATCH, DELETE) need the `X-XSRF-TOKEN` header with the value of the `XSRF-TOKEN` cookie that `GET /api/auth/csrf` sets; call it again after login and logout. Another teacher's data answers 404, like missing data.
 
 ## Decisions
 
