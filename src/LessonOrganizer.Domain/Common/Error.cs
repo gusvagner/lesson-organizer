@@ -7,4 +7,6 @@ public sealed record Error(ErrorKind Kind, string Message, string? Field = null)
     public static Error NotFound(string message) => new(ErrorKind.NotFound, message);
 
     public static Error Conflict(string message) => new(ErrorKind.Conflict, message);
+
+    public static Error Unauthorized(string message) => new(ErrorKind.Unauthorized, message);
 }
