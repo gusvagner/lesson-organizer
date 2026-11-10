@@ -1,14 +1,18 @@
 # Lesson Organizer
 
 Web app for independent English teachers to manage students and lesson plans.
-ASP.NET Core Web API (Clean Architecture) + EF Core/PostgreSQL + Angular.
+.NET 10 (LTS) ASP.NET Core Web API (Clean Architecture) + SQL Server with EF Core and ASP.NET Core Identity + Angular 22. Runs with Docker Compose (`db` + `app`).
 
 ## Source of truth
 
 Read these before any task. Do not contradict them; if something is unclear, ask.
 
 - `docs/requirements.md` — what the product must do (and what is out of scope).
-- `docs/plan.md` — approved design: data model, architecture, auth, API contracts, acceptance criteria, stages.
+- `docs/plan.md` — approved design: data model, auth, API contracts, acceptance criteria, stages.
+- `docs/architecture.md` — backend: layers, dependency rule, folders per project, where each rule lives, test projects.
+- `docs/frontend-architecture.md` — Angular: folders, kinds of code, routes, data flow, auth, UI states, tests.
+- `docs/stack.md` — backend and frontend versions (.NET 10, Angular 22), build settings, packages, Docker, commands.
+- `docs/decisions/` — ADRs.
 
 The original exercise PDF in `docs/` is local only (git-ignored). Never commit or quote it in the repo.
 
@@ -26,18 +30,27 @@ lesson-organizer/
 ├── README.md                     # (planned) pitch, setup, run, tests, demo credentials
 ├── .gitignore
 ├── .editorconfig                 # (planned)
-├── Directory.Build.props         # (planned) nullable, warnings as errors, target framework
-├── docker-compose.yml            # (planned) local PostgreSQL
-├── LessonOrganizer.sln           # (planned)
+├── global.json                   # (planned) pins .NET SDK 10.0.403
+├── Directory.Build.props         # (planned) nullable, warnings as errors, net10.0
+├── Directory.Packages.props      # (planned) central package versions
+├── LessonOrganizer.slnx          # (planned)
+├── .config/dotnet-tools.json     # (planned) local tools: dotnet-ef
+├── docker-compose.yml            # (planned) db (SQL Server) + app (API serving Angular)
+├── Dockerfile                    # (planned) multi-stage: Angular build, .NET publish, ASP.NET runtime
+├── .dockerignore                 # (planned)
+├── .env.example                  # (planned) placeholder for the SQL Server password; .env is git-ignored
 │
 ├── docs/
 │   ├── requirements.md           # product requirements
 │   ├── plan.md                   # approved implementation plan
-│   ├── architecture.md           # (planned) layers, dependency rule, diagrams
+│   ├── architecture.md           # backend layers, dependency rule, diagrams
+│   ├── frontend-architecture.md  # Angular structure, routes, state, tests
+│   ├── stack.md                  # versions, build settings, packages, commands
 │   ├── api.md                    # (planned) endpoints, status codes, auth
-│   ├── decisions/                # (planned) ADRs: NNNN-short-title.md
+│   ├── decisions/                # ADRs: NNNN-short-title.md
+│   ├── plans/                    # task-by-task implementation plans: YYYY-MM-DD-N-title.md
 │   └── ai/
-│       ├── AI_LOG.md             # (planned) log of every relevant AI interaction
+│       ├── AI_LOG.md             # log of every relevant AI interaction
 │       ├── prompts/              # reusable prompts, numbered in the order used
 │       │   └── 01-planning.md
 │       └── genai-exercise.md     # (planned) answer to the exercise's GenAI section
@@ -45,19 +58,20 @@ lesson-organizer/
 ├── src/                          # (planned)
 │   ├── LessonOrganizer.Domain/          # entities, enums, invariants; no dependencies
 │   ├── LessonOrganizer.Application/     # use cases, contracts, repository interfaces
-│   ├── LessonOrganizer.Infrastructure/  # EF Core, Identity, repositories, migrations, seed
+│   ├── LessonOrganizer.Infrastructure/  # EF Core DbContext, migrations, repositories, Identity, seed
 │   └── LessonOrganizer.Api/             # controllers, auth config, composition root
 │
 ├── tests/                        # (planned), mirrors src/
 │   ├── LessonOrganizer.Domain.Tests/
 │   ├── LessonOrganizer.Application.Tests/
-│   ├── LessonOrganizer.Infrastructure.Tests/    # Testcontainers PostgreSQL
-│   └── LessonOrganizer.Api.IntegrationTests/    # WebApplicationFactory + Testcontainers
+│   ├── LessonOrganizer.Infrastructure.Tests/    # repositories against SQL Server (Testcontainers)
+│   ├── LessonOrganizer.Api.Tests/               # controller unit tests with named fakes
+│   └── LessonOrganizer.Api.IntegrationTests/    # WebApplicationFactory + SQL Server (Testcontainers)
 │
 └── frontend/                     # (planned) Angular app
 ```
 
-Dependency rule: `Api → Infrastructure → Application → Domain`, and `Api → Application`. Domain and Application must not reference EF Core, ASP.NET Core or Identity.
+Dependency rule: `Api → Infrastructure → Application → Domain`, and `Api → Application`. Domain and Application must not reference ASP.NET Core, Identity or EF Core.
 
 ## How to work
 
@@ -66,7 +80,9 @@ Dependency rule: `Api → Infrastructure → Application → Domain`, and `Api �
 - **Never claim a test or command ran unless it actually ran.** Report real output, including failures.
 - **Proportional design.** No MediatR, AutoMapper, FluentValidation, generic repositories or mocking libraries. Use hand-written, named fakes in unit tests. Adding any package needs a concrete reason recorded in an ADR.
 - **Security defaults.** Teacher id comes only from the authenticated user, never from request body or route. Another teacher's resource returns 404, exactly like a missing one.
-- **Contracts.** Never serialize EF entities; use the request/response records in Application.
+- **Contracts.** Never serialize domain entities to the API; it uses the request/response records in Application. EF Core maps the entities only through Fluent configuration classes in Infrastructure; Domain has no EF attributes or references.
+- **Secrets.** No connection string or password in committed files. Development uses `dotnet user-secrets`; Docker uses `.env` (git-ignored), with placeholders in `.env.example`.
+- **Angular skills.** For any frontend task (components, signals, forms, routing, HTTP, testing, Angular Material), consult the official Angular agent skills from `https://github.com/angular/skills` before writing code. Install once with `npx skills add https://github.com/angular/skills` (ask the human before running it).
 - Small commits, Conventional Commits style (`feat:`, `test:`, `docs:`, `refactor:`, `chore:`).
 
 ## AI log

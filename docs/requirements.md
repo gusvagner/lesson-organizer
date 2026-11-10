@@ -169,7 +169,7 @@ Example 3:
 Use:
 - C# and ASP.NET Core Web API with controllers.
 - Clean Architecture, separating domain, application, infrastructure, and API concerns.
-- EF Core with PostgreSQL.
+- SQL Server through EF Core, run with Docker Compose, kept behind repository interfaces so the business logic does not depend on it.
 - Angular for the frontend.
 - Authentication using a standard ASP.NET Core mechanism, without implementing custom password hashing or cryptographic algorithms.
 - Unit and integration tests.
