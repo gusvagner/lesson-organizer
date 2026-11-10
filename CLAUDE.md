@@ -35,11 +35,11 @@ lesson-organizer/
 ├── Directory.Packages.props      # central package versions
 ├── nuget.config                  # nuget.org only, no company feeds
 ├── LessonOrganizer.slnx          # solution
-├── .config/dotnet-tools.json     # (planned) local tools: dotnet-ef
-├── docker-compose.yml            # (planned) db (SQL Server) + app (API serving Angular)
+├── .config/dotnet-tools.json     # local tools: dotnet-ef
+├── docker-compose.yml            # db (SQL Server) + app (API serving Angular)
 ├── Dockerfile                    # (planned) multi-stage: Angular build, .NET publish, ASP.NET runtime
 ├── .dockerignore                 # (planned)
-├── .env.example                  # (planned) placeholder for the SQL Server password; .env is git-ignored
+├── .env.example                  # placeholder for the SQL Server password; .env is git-ignored
 │
 ├── docs/
 │   ├── requirements.md           # product requirements
@@ -110,5 +110,8 @@ Reusable prompts go in `docs/ai/prompts/NN-short-title.md`.
 | One test project | `dotnet test --project tests/LessonOrganizer.Domain.Tests` |
 | Run API | `dotnet run --project src/LessonOrganizer.Api` |
 | Format | `dotnet format` |
+| Restore local tools | `dotnet tool restore` |
+| Add a migration | `dotnet ef migrations add <Name> --project src/LessonOrganizer.Infrastructure --output-dir Persistence/Migrations` |
+| Database for development | `docker compose up -d db` (copy `.env.example` to `.env` first) |
 
-Migration, database and Docker commands are added when their stage lands (see `docs/stack.md` "Commands").
+Tests in `Infrastructure.Tests` start their own SQL Server container: Docker must be running.

@@ -10,13 +10,15 @@ public class SchemaTests(SqlServerFixture sql)
 {
     private static readonly DateOnly Today = new(2026, 11, 12);
 
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     [Fact]
     public async Task SaveLessonPlan_StudentMissing_ViolatesForeignKey()
     {
         await using var db = await TestDatabase.CreateAsync(sql);
         await using var context = db.NewContext();
         context.LessonPlans.Add(LessonPlan.Create(Guid.CreateVersion7(), "Orphan", null, Today).Value);
-        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync(Ct));
         Assert.Equal(547, Assert.IsType<SqlException>(ex.InnerException).Number);
     }
 
@@ -35,7 +37,7 @@ public class SchemaTests(SqlServerFixture sql)
         await using var context = db.NewContext();
         var tables = await context.Database
             .SqlQueryRaw<string>("SELECT TABLE_NAME AS Value FROM INFORMATION_SCHEMA.TABLES")
-            .ToListAsync();
+            .ToListAsync(Ct);
         Assert.Contains("AspNetUsers", tables);
         Assert.Contains("Students", tables);
         Assert.Contains("LessonPlans", tables);
@@ -50,12 +52,12 @@ public class SchemaTests(SqlServerFixture sql)
         await using (var context = db.NewContext())
         {
             context.LessonPlans.Add(LessonPlan.Create(student.Id, "Review", null, Today).Value);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(Ct);
         }
 
         await using var deleting = db.NewContext();
-        deleting.Students.Remove(await deleting.Students.SingleAsync());
-        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => deleting.SaveChangesAsync());
+        deleting.Students.Remove(await deleting.Students.SingleAsync(Ct));
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => deleting.SaveChangesAsync(Ct));
         Assert.Equal(547, Assert.IsType<SqlException>(ex.InnerException).Number);
     }
 
@@ -74,7 +76,7 @@ public class SchemaTests(SqlServerFixture sql)
         await using var db = await TestDatabase.CreateAsync(sql);
         await AddStudentAsync(db, await db.AddTeacherAsync());
         await using var context = db.NewContext();
-        var level = await context.Database.SqlQueryRaw<string>("SELECT EnglishLevel AS Value FROM Students").SingleAsync();
+        var level = await context.Database.SqlQueryRaw<string>("SELECT EnglishLevel AS Value FROM Students").SingleAsync(Ct);
         Assert.Equal("Intermediate", level);
     }
 
@@ -90,12 +92,12 @@ public class SchemaTests(SqlServerFixture sql)
         {
             context.Students.Add(student);
             context.LessonPlans.Add(plan);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(Ct);
         }
 
         await using var reading = db.NewContext();
-        var storedStudent = await reading.Students.SingleAsync();
-        var storedPlan = await reading.LessonPlans.SingleAsync();
+        var storedStudent = await reading.Students.SingleAsync(Ct);
+        var storedPlan = await reading.LessonPlans.SingleAsync(Ct);
         Assert.Equal((student.Id, teacherId, "Ana", "ana@example.com", EnglishLevel.UpperIntermediate, "Likes music"),
             (storedStudent.Id, storedStudent.TeacherId, storedStudent.Name, storedStudent.Email, storedStudent.EnglishLevel, storedStudent.Notes));
         Assert.Equal((plan.Id, student.Id, "Present perfect", "Conversation", Today, LessonPlanStatus.Delivered),
@@ -108,7 +110,7 @@ public class SchemaTests(SqlServerFixture sql)
         await using var db = await TestDatabase.CreateAsync(sql);
         await using var context = db.NewContext();
         context.Students.Add(Student.Create(Guid.CreateVersion7(), "Ana", null, EnglishLevel.Beginner, null).Value);
-        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync(Ct));
         Assert.Equal(547, Assert.IsType<SqlException>(ex.InnerException).Number);
     }
 
@@ -117,7 +119,7 @@ public class SchemaTests(SqlServerFixture sql)
         var student = Student.Create(teacherId, "Ana", null, EnglishLevel.Intermediate, null).Value;
         await using var context = db.NewContext();
         context.Students.Add(student);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(Ct);
         return student;
     }
 }

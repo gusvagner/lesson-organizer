@@ -59,16 +59,17 @@ Exact versions are pinned in `Directory.Packages.props` when each package is add
 | `xunit.v3` 4.0.1 | all test projects (via `tests/Directory.Build.props`) | Test framework; each test project is an executable on Microsoft Testing Platform, so no `Microsoft.NET.Test.Sdk` or `xunit.runner.visualstudio`. |
 | Coverage extension for MTP (`Microsoft.Testing.Extensions.CodeCoverage`, version to be given by the human) | all test projects | The exercise asks for "sufficient test coverage". `coverlet.collector` works only with VSTest; the cached `Microsoft.Testing.Extensions.CodeCoverage` 18.0.4 crashes on the MTP 2.4 used by xUnit v3 4.0.1 (`TypeLoadException` on `OnTestSessionStartingAsync`). Added before the coverage step of plan 1, Task 8. |
 | `Microsoft.AspNetCore.Mvc.Testing` (10.0.x) | `Api.IntegrationTests` | `WebApplicationFactory`: runs the real API in memory for HTTP tests. |
-| `Microsoft.EntityFrameworkCore.SqlServer` (10.0.x) | `Infrastructure` | EF Core and its SQL Server provider: the data access layer ([ADR 0003](decisions/0003-sql-server-ef-core-docker.md)). |
-| `Microsoft.AspNetCore.Identity.EntityFrameworkCore` (10.0.x) | `Infrastructure` | Identity's EF Core stores: users table, password hashing, lockout, security stamp. |
-| `Microsoft.EntityFrameworkCore.Design` (10.0.x, `PrivateAssets=all`) | `Infrastructure` | Lets `dotnet ef` create migrations, using a design-time `DbContext` factory in Infrastructure, so the Api is not needed as startup project. Not shipped at runtime. |
-| `Testcontainers.MsSql` | `Infrastructure.Tests`, `Api.IntegrationTests` | Starts a throwaway SQL Server container for the tests, so the data layer is tested against the real engine. |
+| `Microsoft.EntityFrameworkCore.SqlServer` 10.0.9 | `Infrastructure` | EF Core and its SQL Server provider: the data access layer ([ADR 0003](decisions/0003-sql-server-ef-core-docker.md)). |
+| `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10.0.9 | `Infrastructure` | Identity's EF Core stores: users table, password hashing, lockout, security stamp. |
+| `Microsoft.EntityFrameworkCore.Design` 10.0.9 (`PrivateAssets=all`) | `Infrastructure` | Lets `dotnet ef` create migrations, using a design-time `DbContext` factory in Infrastructure, so the Api is not needed as startup project. Not shipped at runtime. |
+| `Testcontainers.MsSql` 4.15.0 | `Infrastructure.Tests`, `Api.IntegrationTests` | Starts a throwaway SQL Server container for the tests, so the data layer is tested against the real engine. |
+| `System.Security.Cryptography.Pkcs` 10.0.13 (transitive pin) | everything that uses SQL Server | `Microsoft.Data.SqlClient` 6.1.1 (from EF Core SqlServer 10.0.9) brings 9.0.4, which has a moderate advisory (GHSA-2fmv-rv2c-59x7) and fails the build (`NU1902` as error). Pinned with `CentralPackageTransitivePinningEnabled`. |
 
 Tool (local manifest `.config/dotnet-tools.json`, restored with `dotnet tool restore`):
 
 | Tool | Why |
 |---|---|
-| `dotnet-ef` (10.0.x) | `dotnet ef migrations add`, `dotnet ef database update`. A local tool, so everyone uses the same version. |
+| `dotnet-ef` 10.0.9 | `dotnet ef migrations add`, `dotnet ef database update`. A local tool, so everyone uses the same version. |
 
 *(Optional, needs a yes before it is added)*
 
@@ -101,7 +102,7 @@ Two containers in `docker-compose.yml` at the repository root ([ADR 0003](decisi
 
 | Service | Image | Ports | Volumes | Notes |
 |---|---|---|---|---|
-| `db` | `mcr.microsoft.com/mssql/server`, SQL Server 2022 (tag pinned at stage 4) | `127.0.0.1:1433:1433` | `mssql-data` → `/var/opt/mssql` | `ACCEPT_EULA=Y`, `MSSQL_PID=Developer`, `MSSQL_SA_PASSWORD` from `.env`. Health check with `sqlcmd` (`/opt/mssql-tools18/bin/sqlcmd -C`). |
+| `db` | `mcr.microsoft.com/mssql/server:2022-latest` (pulled 2026-11-10, digest `sha256:11927f5e…`) | `127.0.0.1:1433:1433` | `mssql-data` → `/var/opt/mssql` | `ACCEPT_EULA=Y`, `MSSQL_PID=Developer`, `MSSQL_SA_PASSWORD` from `.env`. Health check with `sqlcmd` (`/opt/mssql-tools18/bin/sqlcmd -C`). |
 | `app` | built from `Dockerfile` | `127.0.0.1:8080:8080` | `dp-keys` → data protection keys folder | Waits for `db` to be healthy. Environment: connection string from `.env`, `Database__MigrateOnStartup=true`, `Seed__DemoData=true`. Runs as the image's non-root `app` user. |
 
 `Dockerfile` (multi-stage):

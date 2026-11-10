@@ -10,7 +10,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
 {
     private const string Image = "mcr.microsoft.com/mssql/server:2022-latest";
 
-    private readonly MsSqlContainer _container = new MsSqlBuilder().WithImage(Image).Build();
+    private readonly MsSqlContainer _container = new MsSqlBuilder(Image).Build();
 
     public string ConnectionStringFor(string database) =>
         new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = database }.ConnectionString;
