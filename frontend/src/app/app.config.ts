@@ -6,6 +6,7 @@ import {
 } from '@angular/core';
 import { provideHttpClient, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
 import { provideNativeDateAdapter } from '@angular/material/core';
+import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { AuthStore } from './core/auth/auth-store';
@@ -21,6 +22,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([xsrfRetryInterceptor, unauthorizedInterceptor]),
     ),
     provideNativeDateAdapter(),
+    { provide: MAT_ICON_DEFAULT_OPTIONS, useValue: { fontSet: 'material-symbols-outlined' } },
     provideAppInitializer(() => inject(AuthStore).restoreSession()),
   ],
 };
