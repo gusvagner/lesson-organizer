@@ -11,5 +11,6 @@
     <Project Path="tests/LessonOrganizer.Application.Tests/LessonOrganizer.Application.Tests.csproj" />
     <Project Path="tests/LessonOrganizer.Domain.Tests/LessonOrganizer.Domain.Tests.csproj" />
     <Project Path="tests/LessonOrganizer.Infrastructure.Tests/LessonOrganizer.Infrastructure.Tests.csproj" />
+    <Project Path="tests/LessonOrganizer.Testing/LessonOrganizer.Testing.csproj" />
   </Folder>
 </Solution>

@@ -121,3 +121,27 @@ Record of relevant AI interactions: what was asked, what came back, what the hum
   - Task 7: CS0234 `Infrastructure.Identity`/`Persistence` missing → Infrastructure 8/8 against SQL Server 2022 in Testcontainers; `docker compose up -d db` → healthy.
   - Task 8: CS0234 `Infrastructure.Repositories` missing → Infrastructure 28/28.
   - Full `dotnet test`: 93/93 passed (exit code 8 only because `Api.Tests` and `Api.IntegrationTests` have no tests yet). `dotnet build`: 0 warnings, 0 errors. Coverage not measured yet.
+
+## 2026-11-10 — Implementation plan 2: backend API
+- Prompt: "What is Scalar?", then "Yes, include Scalar, you may download it from nuget.org, and include it in plan 2." (asked in Portuguese)
+- Output: [plan 2](../plans/2026-11-10-2-backend-api.md), 9 tasks: shared test library, `AuthService` + `IUserAccounts`, `IdentityUserAccounts` with lockout, `ResultHttpMapping` + `AuthController`, composition root with cookie/antiforgery/rate limit/default deny and auth integration tests, students API, lesson plans API, demo seed, OpenAPI + Scalar in Development. `plan.md` §7: migrations at startup moved from stage 8 to stage 5 (integration tests need the schema).
+- Issues found while planning: Identity's default user-name characters would reject emails such as `o'neil@example.com` because `UserName` is the email; MVC binds `?status=7` to an undefined enum without error; integration tests need `https://localhost` because the auth cookie is `Secure`; controllers need an `IAuthSession` seam to be unit-tested without `HttpContext`; fakes and the SQL Server fixture are needed by several test projects.
+- Fix / decision: `AllowedUserNameCharacters` emptied; `LessonPlanService.ListAsync` validates the status filter; lockout implemented with `UserManager` (same logic as `SignInManager.CheckPasswordSignInAsync`) so Infrastructure needs no `HttpContext`; new `LessonOrganizer.Testing` library.
+- Verification: `dotnet package search Scalar.AspNetCore --exact-match --source https://api.nuget.org/v3/index.json` (approved by the human) → latest stable 2.20.0. Local cache: `Microsoft.AspNetCore.Mvc.Testing` 10.0.9, `Microsoft.AspNetCore.OpenApi` 10.0.12, `xunit.v3.extensibility.core` 4.0.1. No code written.
+
+## 2026-11-10 — Plan 2 executed: backend API (stages 5–8)
+- Prompt: "On a new branch." (execute plan 2 in this session, as plan 1) (asked in Portuguese)
+- Output: branch `feat/backend-api`: shared test library `LessonOrganizer.Testing`; `AuthService` and `IUserAccounts`; `IdentityUserAccounts` (lockout 5 / 15 min, dummy-hash timing, emails with `'` and `+`); `ResultHttpMapping`, `ClaimsCurrentTeacher`, `IAuthSession`, `AuthController`; composition root (Identity cookie, antiforgery filter, auth rate limiter, fallback policy, JSON enums as strings, migrations at startup); `StudentsController`, `LessonPlansController`; `DemoDataSeeder`; OpenAPI + Scalar in Development; README "Demo credentials" and "API".
+- Issues found: `AutoValidateAntiforgeryTokenAttribute` needs MVC view services (500 at runtime), replaced by our own `AntiforgeryValidationFilter`; `SignInManager` needs web authentication services, so it is registered by the Api and lockout runs on `UserManager`; SqlClient timed out on `localhost` with the container port published on IPv4 only, so the dev connection string uses `127.0.0.1`; a test read one response body twice; `Assert.All` on a possibly empty list replaced by an exact assertion; .NET 10 already generates a public `Program`.
+- Fix / decision: all recorded as rulings in the branch report.
+- Verification (red → green):
+  - Task 1 (refactor): `dotnet test` → 101/101 before and after.
+  - Task 2: CS0117 `ErrorKind.Unauthorized` missing → Domain 32/32, Application 52/52.
+  - Task 3: 11 runtime failures "No service for type IUserAccounts" → Infrastructure 41/41.
+  - Task 4: CS0234 `Api.Controllers` missing → Api.Tests 19/19.
+  - Task 5: 13 failures (csrf not mapped) → Api.IntegrationTests 13/13, Api.Tests 20/20; manual `dotnet run` → `/api/auth/me` 401, `/api/auth/csrf` 204, migration applied.
+  - Task 6: CS0246 `StudentsController` → Api.Tests 27/27, integration 24/24.
+  - Task 7: CS0246 `LessonPlansController`, CS1061 `.Value` on a list → Application 53/53, Api.Tests 34/34, integration 36/36.
+  - Task 8: CS0234 `Infrastructure.Seed` → Infrastructure 47/47, integration 39/39.
+  - Task 9: 2 failures (401 on `/openapi/v1.json` and `/scalar` in Development) → 3/3.
+  - Full `dotnet test`: 208/208 passed, exit 0. Manual: `/scalar` 302 → UI; login `maria@example.com` 200; students Ana(2), Bruno(1), Carla(0); lesson plans 2026-11-03 Delivered, 2026-11-12 Ready, 2026-11-15 ToPrepare.

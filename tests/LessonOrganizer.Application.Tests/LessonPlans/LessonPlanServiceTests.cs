@@ -1,5 +1,5 @@
 using LessonOrganizer.Application.LessonPlans;
-using LessonOrganizer.Application.Tests.Fakes;
+using LessonOrganizer.Testing.Fakes;
 using LessonOrganizer.Domain.Common;
 using LessonOrganizer.Domain.LessonPlans;
 using LessonOrganizer.Domain.Students;
@@ -41,7 +41,7 @@ public class LessonPlanServiceTests
     {
         var bStudent = await SeedStudentAsync(TeacherB, "Bob");
         await SeedLessonPlanAsync(bStudent.Id, "B's plan");
-        var list = await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(bStudent.Id, null), Ct);
+        var list = (await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(bStudent.Id, null), Ct)).Value;
         Assert.Empty(list);
     }
 
@@ -178,7 +178,7 @@ public class LessonPlanServiceTests
         await SeedLessonPlanAsync(ana.Id, "b later", Today.AddDays(2));
         await SeedLessonPlanAsync(ana.Id, "B today", Today);
         await SeedLessonPlanAsync(ana.Id, "a today", Today);
-        var list = await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(null, null), Ct);
+        var list = (await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(null, null), Ct)).Value;
         Assert.Equal(["a today", "B today", "b later"], list.Select(plan => plan.Title));
     }
 
@@ -190,8 +190,15 @@ public class LessonPlanServiceTests
         await SeedLessonPlanAsync(ana.Id, "Ana ready", status: LessonPlanStatus.Ready);
         await SeedLessonPlanAsync(ana.Id, "Ana to prepare");
         await SeedLessonPlanAsync(bruno.Id, "Bruno ready", status: LessonPlanStatus.Ready);
-        var list = await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(ana.Id, LessonPlanStatus.Ready), Ct);
+        var list = (await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(ana.Id, LessonPlanStatus.Ready), Ct)).Value;
         Assert.Equal(["Ana ready"], list.Select(plan => plan.Title));
+    }
+
+    [Fact]
+    public async Task List_UndefinedStatus_ReturnsStatusError()
+    {
+        var result = await ServiceFor(TeacherA).ListAsync(new LessonPlanFilter(null, (LessonPlanStatus)7), Ct);
+        Assert.Equal(Error.Validation("status", "Status must be one of: ToPrepare, Ready, Delivered."), Assert.Single(result.Errors));
     }
 
     [Fact]

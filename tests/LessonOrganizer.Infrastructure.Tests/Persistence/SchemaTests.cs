@@ -1,3 +1,4 @@
+using LessonOrganizer.Testing.SqlServer;
 using LessonOrganizer.Domain.LessonPlans;
 using LessonOrganizer.Domain.Students;
 using LessonOrganizer.Infrastructure.Identity;

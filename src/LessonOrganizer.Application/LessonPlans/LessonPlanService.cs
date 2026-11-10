@@ -11,13 +11,21 @@ public sealed class LessonPlanService(ILessonPlanRepository lessonPlans, IStuden
     private static readonly Error StudentNotFound = Error.Validation("studentId", "Student not found.");
     private static readonly Error LessonDateRequired = Error.Validation("lessonDate", "Lesson date is required.");
     private static readonly Error StatusRequired = Error.Validation("status", "Status is required.");
+    private static readonly Error UndefinedStatus = Error.Validation(
+        "status", $"Status must be one of: {string.Join(", ", Enum.GetNames<LessonPlanStatus>())}.");
 
-    public async Task<IReadOnlyList<LessonPlanResponse>> ListAsync(LessonPlanFilter filter, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<LessonPlanResponse>>> ListAsync(LessonPlanFilter filter, CancellationToken ct)
     {
+        if (filter.Status is { } status && !Enum.IsDefined(status))
+        {
+            return Result<IReadOnlyList<LessonPlanResponse>>.Failure(UndefinedStatus);
+        }
+
         var plans = await lessonPlans.ListByTeacherAsync(teacher.Id, filter, ct);
         var ownStudents = await students.ListByTeacherAsync(teacher.Id, null, ct);
         var names = ownStudents.ToDictionary(student => student.Id, student => student.Name);
-        return plans.Select(plan => LessonPlanResponse.From(plan, names[plan.StudentId])).ToList();
+        return Result<IReadOnlyList<LessonPlanResponse>>.Success(
+            plans.Select(plan => LessonPlanResponse.From(plan, names[plan.StudentId])).ToList());
     }
 
     public async Task<Result<LessonPlanResponse>> GetAsync(Guid id, CancellationToken ct)

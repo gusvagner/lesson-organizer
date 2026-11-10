@@ -1,7 +1,7 @@
 using LessonOrganizer.Application.Abstractions;
 using LessonOrganizer.Domain.Students;
 
-namespace LessonOrganizer.Application.Tests.Fakes;
+namespace LessonOrganizer.Testing.Fakes;
 
 public sealed class InMemoryStudentRepository(InMemoryData data) : IStudentRepository
 {

@@ -1,7 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../src/LessonOrganizer.Api/LessonOrganizer.Api.csproj" />
+    <ProjectReference Include="../LessonOrganizer.Testing/LessonOrganizer.Testing.csproj" />
   </ItemGroup>
 
 </Project>

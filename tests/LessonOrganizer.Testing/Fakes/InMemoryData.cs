@@ -1,7 +1,7 @@
 using LessonOrganizer.Domain.LessonPlans;
 using LessonOrganizer.Domain.Students;
 
-namespace LessonOrganizer.Application.Tests.Fakes;
+namespace LessonOrganizer.Testing.Fakes;
 
 public sealed class InMemoryData
 {
