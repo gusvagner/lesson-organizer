@@ -19,43 +19,48 @@ Organized by feature. Everything about students lives in `features/students`.
 
 ```
 frontend/src/app/
-├── app.config.ts            providers: router, HttpClient + XSRF + interceptor, Material, initializer
+├── app.ts, app.config.ts    root component (router outlet); providers: router, HttpClient + XSRF + interceptors, date adapter, initializer
 ├── app.routes.ts            top-level routes, lazy feature routes
 ├── core/
-│   ├── auth/                auth.store.ts, auth.api.ts, auth.guard.ts, guest.guard.ts
-│   ├── http/                unauthorized.interceptor.ts, problem-details.ts (error parsing)
-│   └── layout/              shell.component (toolbar, nav, user menu, router outlet)
+│   ├── auth/                user.model.ts, auth-api.ts, auth-store.ts, auth-guard.ts, guest-guard.ts,
+│   │                        safe-return-url.ts, page-reloader.ts, testing/ (FakeAuthApi, FakePageReloader)
+│   ├── http/                api-problem.ts (error parsing), outcome.ts, unauthorized-interceptor.ts, xsrf-retry-interceptor.ts
+│   ├── feedback/            feedback.ts (snackbar messages)
+│   └── layout/              shell.ts (toolbar, nav, user menu, router outlet), viewport.ts (handset breakpoint)
 ├── shared/
-│   ├── confirm-dialog/      generic "Are you sure?" MatDialog
-│   ├── empty-state/         icon + message + optional action
-│   ├── labels/              english-level.pipe, lesson-plan-status.pipe
+│   ├── confirm-dialog/      confirm-dialog.ts: generic "Are you sure?" MatDialog
+│   ├── empty-state/         empty-state.ts: icon + message + optional action
+│   ├── labels/              english-level-label.ts, lesson-plan-status-label.ts, lesson-date-label.ts (pipes)
 │   ├── dates/               lesson-date.ts (yyyy-MM-dd ↔ local Date)
-│   └── forms/               server-errors.ts (ValidationProblemDetails → form control errors)
+│   └── forms/               server-errors.ts (ValidationProblemDetails → form control errors), not-blank.ts
 └── features/
     ├── auth/
-    │   ├── login.page
-    │   └── register.page
+    │   ├── login-page.ts
+    │   └── register-page.ts
     ├── students/
     │   ├── students.routes.ts
-    │   ├── students.api.ts          HttpClient calls, typed contracts
-    │   ├── students.store.ts        signals: list, selected, loading, saving
+    │   ├── students-api.ts          HttpClient calls, typed contracts
+    │   ├── students-store.ts        signals: students, selected, loading, saving
     │   ├── student.model.ts         StudentResponse, StudentRequest, EnglishLevel
-    │   ├── student-list.page        search box + list
-    │   ├── student-details.page     student + their lesson plans + "New lesson plan"
-    │   ├── student-form.page        create and edit
-    │   └── components/              student-table, student-cards, student-form (presentational)
+    │   ├── student-list-page.ts     search box + list
+    │   ├── student-details-page.ts  student + their lesson plans + "New lesson plan"
+    │   ├── student-form-page.ts     create and edit
+    │   ├── components/              student-table.ts, student-cards.ts, student-form.ts (presentational)
+    │   └── testing/                 fake-students-api.ts
     └── lesson-plans/
         ├── lesson-plans.routes.ts
-        ├── lesson-plans.api.ts
-        ├── lesson-plans.store.ts
-        ├── lesson-plan.model.ts     LessonPlanResponse, LessonPlanRequest, LessonPlanStatus
-        ├── lesson-plan-list.page    filters + list + inline status change
-        ├── lesson-plan-form.page    create and edit
-        └── components/              lesson-plan-table, lesson-plan-cards, lesson-plan-filters,
-                                     lesson-plan-form, status-select (presentational)
+        ├── lesson-plans-api.ts
+        ├── lesson-plans-store.ts
+        ├── lesson-plan.model.ts     LessonPlanResponse, LessonPlanRequest, LessonPlanFilter, LessonPlanStatus
+        ├── lesson-plan-query.ts     URL query params → LessonPlanFilter
+        ├── lesson-plan-list-page.ts filters + list + inline status change
+        ├── lesson-plan-form-page.ts create and edit
+        ├── components/              lesson-plan-table.ts, lesson-plan-cards.ts, lesson-plan-filters.ts,
+        │                            lesson-plan-form.ts, status-select.ts (presentational)
+        └── testing/                 fake-lesson-plans-api.ts
 ```
 
-Names like `.page` and `.store.ts` above show the role of each file; exact file and class naming follows the Angular 22 style guide (checked with the Angular skills at stage 9). One component per file.
+File and class names follow the Angular v20+ style guide: `login-page.ts` holds `class LoginPage`; models keep `.model.ts`. One component per file, template and styles inline or in a `.html`/`.scss` of the same name.
 
 ## Kinds of code and what each may do
 
@@ -120,7 +125,7 @@ Top `mat-toolbar` inside the shell: app name, "Lesson plans", "Students", and a 
 
 ## Authentication
 
-- `AuthStore` holds `currentUser` (signal) and exposes `login`, `logout`, `register`, `isLoggedIn`.
+- `AuthStore` holds `currentUser` (signal) and exposes `login`, `logout`, `register`, `isLoggedIn`, `restoreSession`.
 - On app start, an initializer calls `GET /api/auth/csrf` (sets the `XSRF-TOKEN` cookie) and then `GET /api/auth/me` to restore the session. 401 there means "not logged in", not an error.
 - `HttpClient` sends the token as `X-XSRF-TOKEN` on unsafe requests (`withXsrfConfiguration`).
 - After login and after logout, the app calls `/api/auth/csrf` again, because antiforgery tokens are tied to the user.

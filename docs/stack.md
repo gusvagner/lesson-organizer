@@ -151,13 +151,15 @@ What the exercise requires: "integrate the backend you just built with a fronten
 
 | Item | Version | Where it is set | Why |
 |---|---|---|---|
-| Angular | 22 (latest major, the human's choice) | `frontend/package.json`, exact versions in `package-lock.json` | Current major; full framework (router, HTTP, forms) without extra libraries. |
-| Angular CLI | 22, run with `npx` at stage 9 | `frontend/package.json` devDependency | The global CLI on this machine is 21.2.13; the project uses its own local CLI so the global one doesn't matter. |
-| TypeScript | the version Angular 22 requires | `frontend/package.json` | Set by Angular, not chosen separately. `strict` on (CLI default). |
-| Node.js | an LTS line supported by Angular 22, pinned in `frontend/.nvmrc` and `engines` | — | Installed: 26.7.0, which Angular CLI 21 reports as **Unsupported**. Support for Angular 22 is confirmed with `ng version` at stage 9; if 26 is unsupported, install the LTS line Angular lists. |
+| Angular | 22.2.5 (framework), created with CLI 22.2.6 | `frontend/package.json`, exact versions in `package-lock.json` | Current major; full framework (router, HTTP, forms) without extra libraries. |
+| Angular Material / CDK | 22.2.6 | `frontend/package.json` | Added with `ng add @angular/material`. |
+| Angular CLI | 22.2.6, local to the project (`npx ng`) | `frontend/package.json` devDependency | The global CLI on this machine is 21.2.13; the project uses its own local CLI so the global one doesn't matter. |
+| TypeScript | 6.0.3 | `frontend/package.json` | Set by Angular, not chosen separately. `strict` on (CLI default). |
+| Vitest | 5.1.0, with jsdom | `frontend/package.json` | CLI default test runner. |
+| Node.js | 26.x, pinned in `frontend/.nvmrc` and `engines` | — | Installed: 26.7.0. `ng version` with Angular CLI 22.2.6 reports no unsupported-version warning. |
 | npm | 11.6.3 (installed) | — | Comes with Node; lockfile committed. |
 
-Verified on 2026-11-10 with `node --version`, `npm --version` and `ng version`. No package registry was queried.
+Verified on 2026-11-10 with `npx ng version` after `npx @angular/cli@22 new` (npm downloads approved by the human). File and class names follow the Angular v20+ style guide: `login-page.ts` holds `class LoginPage`, no `.component`/`.service` suffixes; models keep `.model.ts`.
 
 ### How the app is built
 
