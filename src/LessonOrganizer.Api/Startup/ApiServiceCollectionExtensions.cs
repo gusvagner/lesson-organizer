@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using LessonOrganizer.Api.Http;
 using LessonOrganizer.Api.Security;
 using LessonOrganizer.Application.Abstractions;
 using LessonOrganizer.Application.Auth;
@@ -76,7 +77,11 @@ public static class ApiServiceCollectionExtensions
         services
             .AddControllers(options => options.Filters.Add<AntiforgeryValidationFilter>())
             .AddJsonOptions(options =>
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+            {
+                options.AllowInputFormatterExceptionMessages = false;
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+            })
+            .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = InvalidInputResponse.Create);
 
     private static void AddAuthRateLimiter(IServiceCollection services, IConfiguration configuration)
     {

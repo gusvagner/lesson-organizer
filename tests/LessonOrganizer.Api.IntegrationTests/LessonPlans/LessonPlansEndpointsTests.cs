@@ -70,6 +70,9 @@ public sealed class LessonPlansEndpointsTests(SqlServerFixture sql) : IAsyncLife
         var id = await a.CreateLessonPlanAsync(await a.CreateStudentAsync("Ana"), "Review", "2026-11-12");
         var response = await a.Http.PatchAsJsonAsync($"/api/lesson-plans/{id}/status", new { status = 1 }, Ct);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        Assert.DoesNotContain("LessonOrganizer.", body, StringComparison.Ordinal);
+        Assert.Equal(["status"], JsonDocument.Parse(body).RootElement.GetProperty("errors").EnumerateObject().Select(property => property.Name));
         Assert.Equal("ToPrepare", await StatusOfAsync(a, id));
     }
 

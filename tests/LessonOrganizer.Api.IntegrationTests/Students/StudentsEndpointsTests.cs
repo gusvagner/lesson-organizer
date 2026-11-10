@@ -61,6 +61,10 @@ public sealed class StudentsEndpointsTests(SqlServerFixture sql) : IAsyncLifetim
         var a = await ApiClient.LoggedInAsync(_factory, "a@example.com");
         var response = await a.Http.PostAsJsonAsync("/api/students", new { name = "Ana", englishLevel = 3 }, Ct);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        Assert.DoesNotContain("LessonOrganizer.", body, StringComparison.Ordinal);
+        var errors = JsonDocument.Parse(body).RootElement.GetProperty("errors");
+        Assert.Equal(["englishLevel"], errors.EnumerateObject().Select(property => property.Name));
         await using var context = _factory.NewDbContext();
         Assert.Equal(0, await context.Students.CountAsync(Ct));
     }
@@ -75,6 +79,7 @@ public sealed class StudentsEndpointsTests(SqlServerFixture sql) : IAsyncLifetim
         var body = await response.Content.ReadAsStringAsync(Ct);
         Assert.DoesNotContain("   at ", body, StringComparison.Ordinal);
         Assert.DoesNotContain("Exception", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("LessonOrganizer.", body, StringComparison.Ordinal);
     }
 
     [Fact]
