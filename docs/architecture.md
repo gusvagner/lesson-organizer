@@ -112,7 +112,7 @@ InfrastructureServiceCollectionExtensions.AddInfrastructure(...)
 - `IdentityUserContext` creates only the user tables (no roles).
 - `DbContext` and repositories are scoped; each repository write calls `SaveChangesAsync` once.
 - Foreign key violations are recognised by SQL Server error number 547; duplicate keys by 2601/2627.
-- `IdentityUserAccounts.CheckPassword` uses `SignInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true)`, which counts failures and applies lockout without issuing a cookie; for an unknown email it verifies against a fixed dummy hash so timing does not reveal the account.
+- `IdentityUserAccounts.CheckPassword` uses `UserManager` (`IsLockedOutAsync`, `CheckPasswordAsync`, `AccessFailedAsync`, `ResetAccessFailedCountAsync`), the same steps as `SignInManager.CheckPasswordSignInAsync`, so Infrastructure needs no `HttpContext` and issues no cookie. For an unknown email or a locked account it still verifies a hash (a fixed dummy hash for unknown emails), so timing does not reveal the account. `SignInManager` is registered by the Api, which issues the cookie.
 
 ### `LessonOrganizer.Api`
 
