@@ -239,7 +239,7 @@ Each backend stage follows red → green → refactor, with the failing run and 
 
 Detailed, task-by-task plans live in `docs/plans/`, each written just before it is executed:
 1. [Backend core — stages 0–4](plans/2026-11-10-1-backend-core.md)
-2. Backend API — stages 5–8
+2. [Backend API — stages 5–8](plans/2026-11-10-2-backend-api.md)
 3. Frontend — stages 9–11
 4. Delivery — stage 12
 5. Security review — stage 13
@@ -251,10 +251,10 @@ Detailed, task-by-task plans live in `docs/plans/`, each written just before it 
 | 2 | Application: `StudentService` with fakes (ownership, 404, 409) | Application tests green |
 | 3 | Application: `LessonPlanService` (foreign student, status, filters) | Application tests green |
 | 4 | Infrastructure: `DbContext` (Identity user tables + students + lesson plans), Fluent configurations, first migration, EF Core repositories; `docker-compose.yml` with the `db` service | Repository tests on a Testcontainers SQL Server green (persistence across contexts, foreign keys, unique email, sorting, search with wildcards) |
-| 5 | Auth: `ApplicationUser`, `IUserAccounts` over Identity, `AuthService` (register, login, lockout), cookie, antiforgery, rate limit, `/api/auth/*` | Application, `AuthController` unit and auth integration tests green |
+| 5 | Auth: `IUserAccounts` over Identity, `AuthService` (register, login, lockout), cookie, antiforgery, rate limit, `/api/auth/*`, migrations at startup (`Database:MigrateOnStartup`) | Application, `AuthController` unit and auth integration tests green |
 | 6 | API students: `ResultHttpMapping`, `StudentsController`, isolation tests | Controller unit tests and integration tests green |
 | 7 | API lesson plans: `LessonPlansController`, isolation tests | Controller unit tests and integration tests green |
-| 8 | Migrations at startup (`Database:MigrateOnStartup`) and seed data (`Seed:DemoData`, empty database only), as in §3 | Seed test: runs on an empty database, second run adds nothing, both users can log in |
+| 8 | Seed data (`Seed:DemoData`, empty database only), as in §3 | Seed test: runs on an empty database, second run adds nothing, both users can log in |
 | 9 | Angular 22 as in [stack.md](stack.md#frontend): confirm Node support, Angular skills installed, scaffold, `ng add @angular/material`, proxy, auth pages, route guard, 401 interceptor, XSRF config | Login/register/logout work against the API |
 | 10 | Angular: students list, search, form, details, delete confirmation | Workflow 3 works |
 | 11 | Angular: lesson plans list, filters, form, status change, delete | Workflows 1 and 2 work |
