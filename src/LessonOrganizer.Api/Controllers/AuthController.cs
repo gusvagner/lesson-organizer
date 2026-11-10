@@ -24,7 +24,7 @@ public sealed class AuthController(AuthService auth, IAuthSession session, ICurr
         Response.Cookies.Append(XsrfCookieName, tokens.RequestToken!, new CookieOptions
         {
             HttpOnly = false,
-            Secure = true,
+            Secure = Request.IsHttps,
             SameSite = SameSiteMode.Strict,
             Path = "/",
         });
