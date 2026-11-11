@@ -9,7 +9,7 @@ namespace LessonOrganizer.Api.Tests.Security;
 public class AnonymousEndpointsTests
 {
     [Fact]
-    public void AnonymousActions_AreOnlyCsrfRegisterLogin()
+    public void AnonymousActions_AreOnlyCsrfRegisterLoginMe()
     {
         var anonymous = typeof(AuthController).Assembly.GetTypes()
             .Where(type => type.IsSubclassOf(typeof(ControllerBase)))
@@ -18,7 +18,7 @@ public class AnonymousEndpointsTests
                 .Where(method => IsAnonymous(type, method))
                 .Select(method => $"{type.Name}.{method.Name}"))
             .Order();
-        Assert.Equal(["AuthController.Csrf", "AuthController.Login", "AuthController.Register"], anonymous);
+        Assert.Equal(["AuthController.Csrf", "AuthController.Login", "AuthController.Me", "AuthController.Register"], anonymous);
     }
 
     private static bool IsAnonymous(Type controller, MethodInfo action) =>

@@ -121,14 +121,14 @@ Top `mat-toolbar` inside the shell: app name, "Lesson plans", "Students", and a 
 |---|---|
 | 400 with field errors | Messages under the matching form fields (`server-errors.ts`), plus a general message for unknown fields |
 | 404 | Snackbar "Not found"; go back to the list |
-| 409 | Snackbar with the server's message (e.g. student has lesson plans); stay on the page |
+| 409 | Snackbar with the server's message (e.g. student has lesson plans); stay on the page. Deleting a student whose `lessonPlanCount` is above 0 shows the same message without a request, so the console stays clean; the 409 still covers an out-of-date count |
 | 401 | Interceptor does a full page load of `/login?returnUrl=…` (no snackbar), which drops every store like logout does |
 | 0 / 5xx | Snackbar "Something went wrong. Try again." |
 
 ## Authentication
 
 - `AuthStore` holds `currentUser` (signal) and exposes `login`, `logout`, `register`, `isLoggedIn`, `restoreSession`.
-- On app start, an initializer calls `GET /api/auth/csrf` (sets the `XSRF-TOKEN` cookie) and then `GET /api/auth/me` to restore the session. 401 there means "not logged in", not an error.
+- On app start, an initializer calls `GET /api/auth/csrf` (sets the `XSRF-TOKEN` cookie) and then `GET /api/auth/me` to restore the session. 204 there means "not logged in" (no error in the browser console); 401 means the session belongs to a user that no longer exists.
 - `HttpClient` sends the token as `X-XSRF-TOKEN` on unsafe requests (`withXsrfConfiguration`).
 - After login and after logout, the app calls `/api/auth/csrf` again, because antiforgery tokens are tied to the user.
 - Before every login and register the app also calls `/api/auth/csrf`, and after a 401 the full page load runs the startup initializer again: a token issued while a session existed is refused once that session expires or ends in another tab.

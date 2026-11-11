@@ -10,6 +10,7 @@ export class FakeAuthApi implements PublicApi<AuthApi> {
   readonly responder = new FakeResponder<AuthCall>();
   readonly calls = this.responder.calls;
   user: User = { id: 'u1', name: 'Maria', email: 'maria@example.com' };
+  sessionUser: User | null = this.user;
 
   fail(call: AuthCall, status: number, detail: string | null = null): void {
     this.responder.fail(call, status, { detail });
@@ -35,7 +36,7 @@ export class FakeAuthApi implements PublicApi<AuthApi> {
     return this.responder.respond('logout', () => undefined);
   }
 
-  me(): Observable<User> {
-    return this.responder.respond('me', () => this.user);
+  me(): Observable<User | null> {
+    return this.responder.respond('me', () => this.sessionUser);
   }
 }

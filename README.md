@@ -121,8 +121,8 @@ JSON, cookie session, errors as RFC 9457 ProblemDetails. Full contracts in [docs
 
 | Area | Endpoints | Auth |
 |---|---|---|
-| Auth | `GET /api/auth/csrf`, `POST /api/auth/register`, `POST /api/auth/login` | public |
-| Auth | `POST /api/auth/logout`, `GET /api/auth/me` | session |
+| Auth | `GET /api/auth/csrf`, `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` (204 when logged out) | public |
+| Auth | `POST /api/auth/logout` | session |
 | Students | `GET /api/students?search=`, `GET/PUT/DELETE /api/students/{id}`, `POST /api/students` | session |
 | Lesson plans | `GET /api/lesson-plans?studentId=&status=`, `GET/PUT/DELETE /api/lesson-plans/{id}`, `POST /api/lesson-plans`, `PATCH /api/lesson-plans/{id}/status` | session |
 

@@ -12,5 +12,7 @@ public sealed class IdentityAuthSession(SignInManager<ApplicationUser> signIn, U
         await signIn.SignInAsync(user, isPersistent: true);
     }
 
+    public bool IsSignedIn => signIn.IsSignedIn(signIn.Context.User);
+
     public Task SignOutAsync() => signIn.SignOutAsync();
 }

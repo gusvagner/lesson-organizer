@@ -6,6 +6,9 @@ export const ENGLISH_LEVELS = [
   'Advanced',
 ] as const;
 
+export const HAS_LESSON_PLANS_MESSAGE =
+  'This student has lesson plans. Delete them first or move them to another student.';
+
 export type EnglishLevel = (typeof ENGLISH_LEVELS)[number];
 
 export interface StudentResponse {

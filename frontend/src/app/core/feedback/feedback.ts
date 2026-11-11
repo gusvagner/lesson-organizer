@@ -26,6 +26,10 @@ export class Feedback {
     this.snackBar.open(message, 'Close', { duration: DURATION_MS });
   }
 
+  inform(message: string): void {
+    this.snackBar.open(message, 'Close', { duration: DURATION_MS });
+  }
+
   failure(problem: ApiProblem): void {
     const message = failureMessage(problem);
     if (message !== null) {

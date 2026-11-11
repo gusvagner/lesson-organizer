@@ -4,5 +4,7 @@ public interface IAuthSession
 {
     Task SignInAsync(Guid userId);
 
+    bool IsSignedIn { get; }
+
     Task SignOutAsync();
 }
