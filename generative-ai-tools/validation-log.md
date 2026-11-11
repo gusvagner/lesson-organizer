@@ -44,3 +44,33 @@ The generating agent dispatched a fresh reviewer subagent, pasted its report as 
 **Minor note of mine:** the reviewer's report was pasted with its own `##` headings, so it breaks the log's heading structure (its sections look like top-level parts). Cosmetic; left as it came, since "as it came" is the rule.
 
 **Result:** part 1 with its review accepted. Ready for the human to commit, then part 2.
+
+## Part 2 — Tasks core (2026-11-11, prompt v5)
+
+**Re-run by me:** `dotnet build` → 0 warnings, 0 errors; `dotnet format --verify-no-changes` → exit 0; `dotnet test` → 59 total, 0 failed. Matches the report. No part 3 file exists.
+
+**TDD evidence:** red 1 = 17 compile errors (missing types); red 2 = real types with stub behaviour, 29 of 56 failed for the expected reasons. The agent separated a setup error (its first stub broke the build with CS9113) from a test result, and reported the 12 tests that passed against the stubs, explaining why the 4 not-found ones prove nothing on their own. When a review fix's test passed at once because the code already saved, it removed the save call to see the test fail, then restored it — a mutation check it was not asked for.
+
+**Code read by me against the prompt:**
+
+| # | Point | Verdict |
+|---|---|---|
+| 1 | The owner comes only from `ICurrentUser`; `CreateTaskRequest` has no user field, so nothing can be created for another user | OK |
+| 2 | Title trimmed before the length check (200 chars + spaces passes); blank description → null; new tasks `Todo`; `UpdatedAt` moves on update, `CreatedAt` does not; times from `TimeProvider` in UTC | OK |
+| 3 | The service returns a closed result type (success / validation errors by camelCase field / not found) and never throws for expected outcomes | OK |
+| 4 | Validation messages give the limit and the value received, never echo the title text | OK |
+| 5 | `ITaskRepository.AddAsync` takes no owner id (the entity carries it), unlike "every method takes the owner id" | **Accepted deviation:** the service sets the owner from the token before calling it, so it cannot widen access; flagged by the agent itself |
+| 6 | An invalid PUT body on another user's task returns 400, not 404 | **Accepted:** a missing task with the same body also gets 400, so nothing about the other user's task leaks |
+
+**The reviewer:** 0 Critical, 2 Important, 5 Minor.
+
+| # | Reviewer finding | Agent's decision | My verdict |
+|---|---|---|---|
+| I1 | A huge `page` overflows the offset (a 500 on SQL Server in part 3) | Fixed test-first, with a test at the exact limit | Agree |
+| I2 | A token with a valid Guid `sub` but no `Users` row would hit the FK → 500 | Deferred to part 4: check the user exists when the token is validated → 401, with a test | Agree to defer; **I will check it in part 4** (it costs one query per request — acceptable for this API) |
+| M | Update not proven to save | Fixed (fake records saves) + mutation check | Agree |
+| M | Default-status test cannot tell `Todo` from "never set" (enum zero value) | Declined: no unit test can catch it; string-status checks in parts 3 and 4 do | Agree — a correct decline |
+| M | The log's reason for version-7 Guids was wrong for SQL Server | Fixed: `Guid.NewGuid()`, log corrected, primary-key indexing left to part 3 | Agree |
+| M | Two counts off by one in the log; `FixedClock` could advance | Fixed (counts; renamed `ManualClock`) | Agree |
+
+**Result:** part 2 accepted. To carry into part 4: the `sub`-without-user case (I2).

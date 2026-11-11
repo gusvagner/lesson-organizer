@@ -230,3 +230,308 @@ Resumo da execução de teste: Aprovado!
 ```
 
 Part 2 has not been started (the coordinator asked me to stop after this review).
+
+## Part 2 — Tasks core
+
+### What was built
+
+`src/TaskManagement.Api/Tasks/`:
+- `TaskItemStatus.cs`: `Todo`, `InProgress` and `Done`. Since the order defines the stored values, `Todo` is the default (0).
+- `TaskItem.cs`: the entity. Setters are private and EF gets a private parameterless constructor, used in part 3. `Create(ownerId, title, description, dueDate, now)` gives a new task the status `Todo`, sets `CreatedAt` and `UpdatedAt` to `now` in UTC, and gives it a new id. *(Corrected after review: this first said `Guid.CreateVersion7(now)`, "time-ordered and helps the index in part 3". That reason is wrong for SQL Server, and the id is now `Guid.NewGuid()`. See review finding 5.)* `Replace(title, description, status, dueDate, now)` replaces the four fields and moves `UpdatedAt` only. Both methods trim the title and turn a blank description into `null`, so the entity can't hold an untrimmed title or a blank description.
+- `TaskContracts.cs`:
+  - `CreateTaskRequest(Title, Description, DueDate)`: there is no status, since every new task is `Todo`.
+  - `UpdateTaskRequest(Title, Description, Status, DueDate)`: `Status` is nullable so the validator can report a missing status. PUT replaces the whole task, so the status is required.
+  - `TaskResponse` (`Id`, `Title`, `Description`, `Status`, `DueDate`, `CreatedAt`, `UpdatedAt`; the owner is not exposed).
+  - `TaskListQuery` (`Status?`, `Page` = 1, `PageSize` = 20).
+  - `PagedResponse<T>(Items, Page, PageSize, TotalCount)`.
+- `TaskResult.cs`: `TaskResult<T>` is a closed hierarchy with `Success(Value)`, `ValidationFailed(Errors)` and `NotFound`. Its constructor is private, so no other cases can exist. The errors are an `IReadOnlyDictionary<string, string[]>`, the shape `ValidationProblemDetails` takes in part 4.
+- `TaskValidator.cs`: a static class with the hand-written rules, one `Validate` overload each for create, update and list.
+  - Title: required, 1–200 characters after trimming.
+  - Description: at most 2000 characters, but a blank description is not checked because it becomes `null`.
+  - Status: required on update, and must be a defined enum value (`(TaskItemStatus)99` is rejected).
+  - `page`: at least 1.
+  - `pageSize`: 1–100.
+
+  Keys are the camelCase field names. Each message gives the limit and the value it got.
+- `ITaskRepository.cs`: `FindAsync(ownerId, taskId)`, `ListAsync(ownerId, status, page, pageSize)` (returns `TaskPage(Items, TotalCount)`), `AddAsync(task)`, `UpdateAsync(ownerId, task)` and `DeleteAsync(ownerId, taskId)` (returns `bool`).
+- `TaskService.cs`: takes `ITaskRepository`, `ICurrentUser` and `TimeProvider` (constructor injection). Every call uses `currentUser.UserId` as the owner. Validation runs first, and then:
+  - Get, update and delete of a task that is missing or belongs to someone else give `NotFound`.
+  - Delete returns `TaskResult<Guid>` (the deleted id).
+  - Entities are mapped to `TaskResponse` and never returned.
+
+`src/TaskManagement.Api/Auth/ICurrentUser.cs`: `Guid UserId { get; }`. The implementation that reads the `sub` claim (`CurrentUser.cs`) comes in part 4.
+
+Tests (`tests/TaskManagement.Tests/Unit/`):
+- Named fakes in `Fakes/`:
+  - `FakeTaskRepository`: in-memory, scoped by owner, and records the last list request. Its `UpdateAsync` throws if the owner doesn't match.
+  - `FixedCurrentUser`.
+  - `FixedClock`: a `TimeProvider` with `Advance`. *(Renamed `ManualClock` after review finding 7.)*
+- `TaskValidatorTests` (23 cases; corrected from "24" after review finding 6): missing title (null, empty, spaces), title of 200 / 201 / 200 plus surrounding spaces, description of 2000 / 2001 / 3000 spaces, one error per field, update with a missing or undefined status, long title or description on update, paging limits (page 0 and -1; pageSize 0, 1, 100, 101), and an undefined status in the list query.
+- `TaskServiceTests` (17 methods and 18 cases, since the blank-description theory has 2 rows; corrected from "17 cases" after review finding 6):
+  - Create: the owner comes from the current user and the status is `Todo`; the title is trimmed; a blank description becomes null; `CreatedAt` and `UpdatedAt` come from the clock; an invalid request stores nothing.
+  - Get: own task found; another user's task and a missing task are `NotFound`.
+  - Update: all four fields are replaced and only `UpdatedAt` moves; another user's task is `NotFound` and stays unchanged; a missing task is `NotFound`; an invalid request returns field errors.
+  - Delete: own task is removed; another user's task is `NotFound` and kept.
+  - List: only the caller's tasks, with the paging info; status and paging are passed to the repository for the current user; invalid paging returns errors without querying.
+
+### Red 1 — tests written, no implementation
+
+Command (from `generative-ai-tools/`): `dotnet test`
+
+17 compile errors, all `CS0234` / `CS0246` for missing types. Distinct errors per file (MSBuild duplicates and the path prefix trimmed):
+
+```
+TaskValidatorTests.cs: error CS0234: O nome de tipo ou namespace "Tasks" não existe no namespace "TaskManagement.Api"
+TaskValidatorTests.cs: error CS0246: O nome do tipo ou do namespace "UpdateTaskRequest" não pode ser encontrado
+TaskServiceTests.cs: error CS0234: O nome de tipo ou namespace "Tasks" não existe no namespace "TaskManagement.Api"
+TaskServiceTests.cs: error CS0246: O nome do tipo ou do namespace "TaskService" não pode ser encontrado
+TaskServiceTests.cs: error CS0246: O nome do tipo ou do namespace "TaskItem" não pode ser encontrado
+FixedCurrentUser.cs: error CS0246: O nome do tipo ou do namespace "ICurrentUser" não pode ser encontrado
+FakeTaskRepository.cs: error CS0234: O nome de tipo ou namespace "Tasks" não existe no namespace "TaskManagement.Api"
+FakeTaskRepository.cs: error CS0246: O nome do tipo ou do namespace "ITaskRepository" não pode ser encontrado
+FakeTaskRepository.cs: error CS0246: O nome do tipo ou do namespace "TaskItem" não pode ser encontrado   (x6)
+FakeTaskRepository.cs: error CS0246: O nome do tipo ou do namespace "TaskItemStatus" não pode ser encontrado   (x2)
+FakeTaskRepository.cs: error CS0246: O nome do tipo ou do namespace "TaskPage" não pode ser encontrado
+Falha na compilação com o código de saída: 1.
+```
+
+Expected reason: the namespace `TaskManagement.Api.Tasks` and all of its types, plus `ICurrentUser`, do not exist yet.
+
+### Red 2 — real types, stub behavior
+
+Final versions of `TaskItemStatus`, the contracts, `TaskResult`, `ITaskRepository`/`TaskPage` and `ICurrentUser`, with stubs in the three classes that hold behavior:
+- `TaskValidator` always returns no errors.
+- `TaskService` returns `NotFound` from every method.
+- `TaskItem.Create` copies the raw values and sets no status or times; `Replace` does nothing.
+
+A setup problem came first and is not a test result: my first `TaskService` stub had a primary constructor whose parameters were never read, and warnings-as-errors stopped the build with `error CS9113: O parâmetro "repository" não está lido` (likewise for `currentUser` and `timeProvider`). I changed the stub to an explicit constructor that discards them, and the next run compiled.
+
+Command: `dotnet test`
+
+```
+TaskServiceTests.CreateAsync_BlankDescription_StoresNull(description: "   ") => Assert.Single() Failure: The collection was empty
+TaskServiceTests.CreateAsync_BlankDescription_StoresNull(description: "") => Assert.Single() Failure: The collection was empty
+TaskServiceTests.CreateAsync_InvalidRequest_ReturnsFieldErrorsAndStoresNothing => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.CreateAsync_TitleWithSurroundingSpaces_StoresTrimmedTitle => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.CreateAsync_ValidRequest_SetsCreatedAtAndUpdatedAtFromClock => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.CreateAsync_ValidRequest_StoresTaskOwnedByCurrentUserWithTodoStatus => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.DeleteAsync_OwnTask_RemovesIt => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.GetAsync_OwnTask_ReturnsIt => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.ListAsync_InvalidPaging_ReturnsFieldErrorsWithoutQuerying => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.ListAsync_StatusAndPaging_PassesThemToRepositoryForCurrentUser => Assert.Equal() Failure: Values differ
+TaskServiceTests.ListAsync_TasksOfTwoUsers_ReturnsOnlyCurrentUsersTasksWithPagingInfo => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.UpdateAsync_InvalidRequest_ReturnsFieldErrorsAndLeavesTaskUnchanged => Assert.IsType() Failure: Value is not the exact type
+TaskServiceTests.UpdateAsync_OtherUsersTask_ReturnsNotFoundAndLeavesTaskUnchanged => Assert.Equal() Failure: Values differ
+TaskServiceTests.UpdateAsync_OwnTask_ReplacesFieldsAndAdvancesUpdatedAtOnly => Assert.IsType() Failure: Value is not the exact type
+TaskValidatorTests.ValidateCreate_DescriptionOf2001Characters_ReturnsDescriptionErrorWithLength => System.Collections.Generic.KeyNotFoundException : The given key 'description' was not present in the dictionary.
+TaskValidatorTests.ValidateCreate_MissingTitleAndLongDescription_ReturnsOneErrorPerField => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateCreate_MissingTitle_ReturnsTitleError(title: "   ") => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateCreate_MissingTitle_ReturnsTitleError(title: "") => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateCreate_MissingTitle_ReturnsTitleError(title: null) => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateCreate_TitleOf201Characters_ReturnsTitleErrorWithLength => System.Collections.Generic.KeyNotFoundException : The given key 'title' was not present in the dictionary.
+TaskValidatorTests.ValidateList_PageBelowOne_ReturnsPageError(page: -1) => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateList_PageBelowOne_ReturnsPageError(page: 0) => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateList_PageSizeOutsideOneToHundred_ReturnsPageSizeError(pageSize: 0) => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateList_PageSizeOutsideOneToHundred_ReturnsPageSizeError(pageSize: 101) => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateList_UndefinedStatusValue_ReturnsStatusError => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateUpdate_DescriptionOf2001Characters_ReturnsDescriptionError => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateUpdate_MissingStatus_ReturnsStatusError => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateUpdate_TitleOf201Characters_ReturnsTitleError => Assert.Equal() Failure: Collections differ
+TaskValidatorTests.ValidateUpdate_UndefinedStatusValue_ReturnsStatusErrorWithValue => System.Collections.Generic.KeyNotFoundException : The given key 'status' was not present in the dictionary.
+
+Resumo da execução de teste: Falhou!
+  total: 56
+  falhou: 29
+  concluído com êxito: 27
+  ignorados: 0
+```
+
+(This is one line per failing test: its name and the first line of its failure message, taken from the raw output. The 27 that passed are the 15 Part 1 tests plus 12 new ones.)
+
+**Finding: 12 new tests passed before their code existed.**
+
+- 8 validator happy-path tests: title of 200, title of 200 plus spaces, description of 2000, blank description of 3000, complete update, default list query, and paging (1, 1) and (5, 100). The stub returns "no errors" for everything. They guard against rules that are too strict, so they can't fail against a validator that accepts everything. The failing tests next to them cover the other side.
+- 4 not-found tests: `GetAsync_OtherUsersTask_ReturnsNotFound`, `GetAsync_MissingTask_ReturnsNotFound`, `UpdateAsync_MissingTask_ReturnsNotFound` and `DeleteAsync_OtherUsersTask_ReturnsNotFoundAndKeepsTask`. The stub service returns `NotFound` for everything. **On their own they prove nothing about ownership.** They mean something only next to `GetAsync_OwnTask_ReturnsIt` and `DeleteAsync_OwnTask_RemovesIt`, which failed here and show that the same call does find the task when the owner matches.
+- Also, `UpdateAsync_OtherUsersTask_ReturnsNotFoundAndLeavesTaskUnchanged` failed in this run only because the stub `TaskItem.Create` did not set `UpdatedAt`. Its not-found assertion had already passed. So that red run did not test the ownership rule either. The same pairing argument applies: `UpdateAsync_OwnTask_ReplacesFieldsAndAdvancesUpdatedAtOnly` failed and later passed.
+
+### Green
+
+After implementing `TaskItem.Create`/`Replace`, `TaskValidator` and `TaskService`:
+
+Command: `dotnet build`
+
+```
+Compilação com êxito.
+    0 Aviso(s)
+    0 Erro(s)
+```
+
+Command: `dotnet format --verify-no-changes` → exit 0, no output.
+
+Command: `dotnet test`
+
+```
+Resumo da execução de teste: Aprovado!
+  total: 56
+  falhou: 0
+  concluído com êxito: 56
+  ignorados: 0
+  duração: 1s 400ms
+```
+
+Refactor: none after green. The validator already has one small method per rule, and every service method is under 20 lines.
+
+### Unsure / for the human
+
+- **`AddAsync(task)` takes no separate owner id**, while the prompt says "every method takes the owner id". The task already carries its `UserId`, which the service sets from `ICurrentUser`. A second `ownerId` parameter would be redundant and could disagree with `task.UserId`. Every method that reads, changes or removes an existing row does take the owner id. If you want the literal rule, it is a one-line change.
+- **On update, validation runs before the ownership lookup.** An invalid PUT on another user's task (or a missing one) returns 400, not 404. The 400 says nothing about whether the task exists, because it depends only on the body, so nothing leaks. It also saves a database round trip. If you want 404 to win, the order changes.
+- **`TaskResult<Guid>` for delete:** delete has no validation case, and the `Guid` is only the deleted id. A dedicated two-case type would be more exact, but I kept one result type for the controller to map.
+- **Description length** is counted on the value as sent (not trimmed), because only blank descriptions are normalized. Surrounding whitespace in a non-blank description is kept, and it counts toward the 2000.
+- **`TaskService` is not registered in DI yet**, because `ITaskRepository` has no implementation until part 3. Both are registered in part 4, with the controller and `CurrentUser`.
+- **Unknown status strings and numeric statuses in JSON** are rejected in part 4 by the JSON enum converter. Here the validator rejects only enum values that are not defined, which can still arrive as a cast.
+
+## Part 2 — review
+
+A fresh `general-purpose` subagent with no memory of the work got the prompt (`prompts/01-generate.md`), the part number, the Part 2 file list and this log. It was told to re-run build, test and format itself, to check the red runs, to grade its findings, and to edit nothing.
+
+### Reviewer's report (as it came)
+
+#### Review — Part 2 (Tasks core)
+
+Reviewer: fresh subagent, no prior context; read and ran commands only, edited nothing. Scope: `Tasks/*.cs`, `Auth/ICurrentUser.cs`, `Unit/TaskValidatorTests.cs`, `Unit/TaskServiceTests.cs`, `Unit/Fakes/*`, and the Part 2 section of `generation-log.md`, against `prompts/01-generate.md` (v5).
+
+#### Commands re-run (from `generative-ai-tools/`)
+
+| Command | Result |
+|---|---|
+| `dotnet build` | `Compilação com êxito. 0 Aviso(s) 0 Erro(s)` |
+| `dotnet build --no-incremental` | `0 Aviso(s) 0 Erro(s)` |
+| `dotnet test` | `Aprovado! total: 56, falhou: 0, concluído com êxito: 56, ignorados: 0` (1s 291ms), exit 0 |
+| `dotnet format --verify-no-changes` | exit 0, no output |
+
+Real output matches the log's Green section.
+
+#### Red-run plausibility
+
+**Red 1 (17 compile errors) — plausible and internally consistent.** Roslyn stops before binding method bodies when declaration-level errors exist, so only signature/field/return-type errors appear. That explains why `TaskValidatorTests.cs` reports only `UpdateTaskRequest` (the return type of `ValidUpdate()`) and not `TaskValidator`/`CreateTaskRequest`, which only appear inside bodies. The counts match the fake exactly: `TaskItem` ×6 (field, `Tasks` property, `Seed`, `FindAsync`, `AddAsync`, `UpdateAsync` declarations), `TaskItemStatus` ×2 (`ListAsync`, `RecordedListRequest`), `TaskPage` ×1. The listed lines add up to 17. Reason: missing types — correct.
+
+**Red 2 (29 failed / 27 passed of 56) — plausible.** Against the stubs described (validator returns no errors; every service method returns `NotFound`; `Create` copies raw values; `Replace` no-op), checked test by test:
+- Validator tests that index `errors["x"]` → `KeyNotFoundException`; those comparing `errors.Keys` → "Collections differ". Matches the log line for line.
+- `CreateAsync_BlankDescription_*` → `Assert.Single` on an empty collection (the stub service never calls `AddAsync`). ✓
+- `ListAsync_StatusAndPaging_*` → "Values differ" (`LastListRequest` stays null). ✓
+- `UpdateAsync_OtherUsersTask_*` gets past `NotFound`, `Title` and `Status` (the stub never sets `Status`, and `default(TaskItemStatus)` is `Todo`), then fails on `UpdatedAt` (default vs `Start`) — as the log admits. ✓
+- The 4 not-found tests and 8 validator happy-path tests pass against the stubs, as logged. The log flags this itself, and its pairing argument holds (`GetAsync_OwnTask`/`DeleteAsync_OwnTask` were red and are now green).
+- The CS9113 note (an unread primary-constructor parameter becomes an error under warnings-as-errors) is real compiler behavior.
+- 29 + 27 = 56 = 15 Part 1 + 41 new. ✓
+
+One limitation the red runs don't show: most service tests failed at `Assert.IsType<Success>`, not at the specific assertion, so the red run doesn't prove the trim, blank→null and clock assertions can fail. Reading the code, they would (e.g., `"  Plan lesson  "` ≠ `"Plan lesson"`). Nothing to change.
+
+#### Findings
+
+#### Critical
+None.
+
+#### Important
+
+**1. `page` overflow: large values wrap the offset — a 500 in Part 3, a silent page 1 in the fake.**
+`src/TaskManagement.Api/Tasks/TaskValidator.cs:74-85`, `tests/TaskManagement.Tests/Unit/Fakes/FakeTaskRepository.cs:23`. The validator checks only `page >= 1`. Any repository computes the offset as `(page - 1) * pageSize` in `int`.
+*Failure scenario:* `GET /api/tasks?page=21474838&pageSize=100` → `(21474837 * 100)` overflows to about -2.1e9. LINQ-to-Objects (the fake) treats a negative `Skip` as 0 and returns the first page with no error. EF Core/SQL Server sends `OFFSET -… ROWS`, SQL Server rejects it ("The offset specified in a OFFSET clause may not be negative"), and the request fails with an unhandled `SqlException` → 500, where the prompt requires 400 for invalid paging. Fix: reject when `(long)(page - 1) * pageSize > int.MaxValue` (or set an explicit upper bound on `page`), with a validator test at the boundary. This belongs to Part 2's validator; the 500 itself only appears in Part 3/4, so it can be deferred to Part 3, but someone must decide.
+
+**2. Nothing in Part 2 handles a caller whose `sub` is a valid Guid with no `Users` row.**
+`src/TaskManagement.Api/Tasks/TaskService.cs:15-17`, `TaskResult.cs`. `CreateAsync` inserts with `UserId = currentUser.UserId`, and Part 3 requires a database FK to `Users`.
+*Failure scenario:* a correctly signed token with `sub` = a random Guid passes authentication in Part 4 (the only `sub` check is "is a Guid"). `POST /api/tasks` then violates the FK → `DbUpdateException` from `SaveChanges` → 500. `TaskResult` has no case for this, and the service can't detect it. Decision needed in Part 3/4: reject unknown users at authentication (401) or map the case explicitly — not an unhandled exception. A design gap, not a Part 2 test failure; recommend deferring to Part 4 with a named decision.
+
+#### Minor
+
+**3. The unit tests don't check that an update is ever saved.**
+`FakeTaskRepository.cs:33-42`, `TaskServiceTests.cs:100-117`. `FindAsync` returns the live object in the list, `Replace` mutates it, and the fake's `UpdateAsync` does nothing (only an owner check).
+*Failure scenario:* someone deletes `await repository.UpdateAsync(...)` at `TaskService.cs:60`. All 56 tests stay green; with EF in Part 3/4, PUT returns 200 but nothing is saved. Only the Part 4 CRUD round trip would catch it. Have the fake record update calls (or store copies) and assert on that.
+
+**4. The default-status test can't catch a missing assignment.**
+`TaskItemStatus.cs:5`, `TaskServiceTests.cs:27`. `Todo` is enum value 0 = `default`. If `Create` stopped setting `Status`, `Assert.Equal(TaskItemStatus.Todo, created.Status)` would still pass — Red 2 shows this already happened (the stub "sets no status"). Acceptable, but worth noting. A test that seeds, sets `Done` via `Replace` and checks a new `Create` gives `Todo` wouldn't help either; the only real guard is the explicit `TaskItemStatus.Todo` argument at `TaskItem.cs:29`.
+
+**5. The log's reason for `Guid.CreateVersion7` is wrong for SQL Server.**
+`TaskItem.cs:28` and the log ("time-ordered and helps the index in part 3"). SQL Server sorts `uniqueidentifier` by its last 6 bytes first; the v7 timestamp is in the first bytes, so v7 ids are not sequential in a SQL Server clustered index. No behavioral effect, but the stated benefit doesn't happen on this database (EF's `SequentialGuidValueGenerator` exists for this). Correct either the reason or the choice.
+
+**6. The test counts in the log are off by one each way.**
+`generation-log.md` "What was built": `TaskValidatorTests` has **23** cases, not 24; `TaskServiceTests` has 17 methods but **18** cases (the blank-description theory has 2 rows). The totals (41 new, 56 overall) are correct.
+
+**7. The name `FixedClock` doesn't match what it does.**
+`Fakes/FixedClock.cs:9`. It has `Advance`, so it's a controllable clock, not a fixed one. Cosmetic.
+
+#### Checked and fine
+- Files sit where the prompt's tree says; the enum is `TaskItemStatus` (not `TaskStatus`) with `Todo | InProgress | Done`; all the contracts named in the prompt are present; `TaskResponse` doesn't expose `UserId`; entities never leave the service.
+- `TaskItem`: private setters and a private constructor (ready for EF); title trimmed, blank description → `null`, UTC `CreatedAt`/`UpdatedAt` from `TimeProvider`; `Replace` moves only `UpdatedAt`.
+- Validator: title required and 1–200 after trimming (matches the entity's `Trim()`, so a 200-character title with surrounding spaces is accepted); the 2000 description limit is skipped for blank values (matches the entity); status required on update and must be a defined value; `page >= 1`, `pageSize` 1–100 with the default of 20 in one constant; camelCase keys; each message gives the limit and the value received.
+- Result type: a closed `Success / ValidationFailed / NotFound` hierarchy; errors in the `ValidationProblemDetails` dictionary shape.
+- Owner scoping: every service call uses `ICurrentUser.UserId`; every repository method that reads, changes or removes a task takes `ownerId`; a missing task and another user's task give the same `NotFound`. The author's choice to give `AddAsync` no separate owner id is reasonable (`task.UserId` carries it; an extra parameter could disagree).
+- Update validates before the existence check, so an invalid body gets 400 rather than 404; this leaks nothing, because the 400 depends only on the body.
+- `!` on `Title` and `Status` comes only after validation guarantees non-null.
+- No mocking libraries, MediatR or AutoMapper; the fakes are named classes; test names follow `Method_Scenario_Expected`; tests use `TestContext.Current.CancellationToken`; every method is under 20 lines.
+- Fit for Part 3/4: `FindAsync` → change the object → `UpdateAsync` suits a tracked EF context. Sorting (due date, no date last, then creation time) belongs in the Part 3 repository; the fake doesn't sort, which is fine for these tests. DI registration, JSON enum strings and rejecting numeric status are correctly marked as Part 4 in the log's "Unsure" list.
+
+### Decisions
+
+| # | Finding | Decision |
+|---|---|---|
+| 1 | A large `page` overflows the offset | **Fixed now** in the Part 2 validator rather than deferred: the bug is in the rule, not in the repository. Tests first: `ValidateList_PageWhoseOffsetOverflowsInt_ReturnsPageErrorWithValue` (page 21,474,838 with pageSize 100) and the boundary `ValidateList_PageWhoseOffsetIsExactlyIntMax_ReturnsNoErrors` (page `int.MaxValue` with pageSize 1, offset exactly `int.MaxValue`). Fix: `OffsetExceedsInt`, which computes `(long)(page - 1) * pageSize > int.MaxValue` and adds a `page` error that gives the page and pageSize. The boundary test passed before the fix, since it is a happy path that guards against a check that is too strict. Part 3 should still add an integration test that a high page returns an empty list rather than an error. |
+| 2 | A valid-Guid `sub` with no `Users` row makes the insert fail on the FK and return 500 | **Deferred to part 4**, and the reviewer is right that it needs a named decision there. Two ways: check in authentication that the user exists and answer 401 when it doesn't, or map the FK violation on insert to a ProblemDetails response. My plan for part 4 is the first: an `OnTokenValidated` check (one indexed lookup per request) gives a 401 for unknown users, with a test. Part 3 will add the FK test the prompt asks for, which shows the database rejects it. Part 2 can't detect this: the service only sees `ICurrentUser`. |
+| 3 | Unit tests don't check that an update is saved | **Fixed.** `FakeTaskRepository` now records every update call (`Updates`: owner, task id, title and `UpdatedAt` at save time), and `UpdateAsync_OwnTask_SavesReplacedTaskThroughRepositoryOnce` asserts that exactly one save happens with the replaced values. That test passed on its first run, because the service already calls `UpdateAsync`, so I ran the scenario from the finding as a mutation check: I removed the `await repository.UpdateAsync(...)` line, ran the tests, and the new test failed (`Assert.Single() Failure: The collection was empty`, output below). Then I restored the line. |
+| 4 | The default-status test can't tell "set to Todo" from "never set" | **Declined; no code change.** The reviewer reaches the same conclusion: any check of a new task's status sees `Todo` either way, because `Todo` is the enum's zero value. The guard is the explicit `TaskItemStatus.Todo` argument in `TaskItem.Create`. Changing the enum order or adding a `None = 0` value just to make a test possible would put a meaningless state into the domain. Part 3 stores the status as a string, so the integration tests there will read `"Todo"` back from the database, and part 4's HTTP test checks `"status": "Todo"` in the JSON. |
+| 5 | The stated `Guid.CreateVersion7` benefit does not apply on SQL Server | **Fixed.** The reviewer is right: SQL Server sorts `uniqueidentifier` by its last bytes, so v7 ids give no ordering benefit there. The id is now `Guid.NewGuid()`, which also drops a clock-derived value that served no purpose, and I corrected the sentence in "What was built". The index question goes to part 3: random GUIDs in a clustered primary key cause page splits, which is negligible at this scale. In part 3 I will either leave the default clustered primary key and note the trade-off, or make the primary key nonclustered and cluster on `(UserId, …)`. No test covers id generation; the existing tests only rely on ids being unique. |
+| 6 | Test counts in the log are off by one | **Fixed** in place in "What was built": 23 validator cases, and 17 methods / 18 cases in the service tests, each marked as corrected. |
+| 7 | `FixedClock` has `Advance`, so it is not fixed | **Fixed:** renamed to `ManualClock` (file and usages). It's a rename only, so there is no red run. |
+
+### Red for the fixes
+
+Command: `dotnet test` (after the new tests and the `Updates` recording in the fake, before any production change)
+
+```
+TaskValidatorTests.ValidateList_PageWhoseOffsetOverflowsInt_ReturnsPageErrorWithValue =>   Xunit.MicrosoftTestingPlatform.XunitException: System.Collections.Generic.KeyNotFoundException : The given key 'page' was not present in the dictionary.
+Resumo da execução de teste: Falhou!
+  total: 59
+  falhou: 1
+  concluído com êxito: 58
+  ignorados: 0
+```
+
+Two of the three new tests passed at this point, for the reasons given in decisions 1 and 3: one is the boundary happy path, and the other checks a save the code already does.
+
+Mutation check for finding 3: `dotnet test` with `await repository.UpdateAsync(currentUser.UserId, task, cancellationToken);` temporarily removed from `TaskService.UpdateAsync`.
+
+```
+TaskServiceTests.UpdateAsync_OwnTask_SavesReplacedTaskThroughRepositoryOnce =>   Assert.Single() Failure: The collection was empty
+TaskValidatorTests.ValidateList_PageWhoseOffsetOverflowsInt_ReturnsPageErrorWithValue =>   Xunit.MicrosoftTestingPlatform.XunitException: System.Collections.Generic.KeyNotFoundException : The given key 'page' was not present in the dictionary.
+  total: 59
+  falhou: 2
+  concluído com êxito: 57
+```
+
+Without the new test, the same mutation would have left the suite green, as the reviewer said. The line was then restored.
+
+### Green after the fixes
+
+The `UpdateAsync` call was restored, `OffsetExceedsInt` added, `Guid.NewGuid()` used, and `FixedClock` renamed to `ManualClock`.
+
+Command: `dotnet build`
+
+```
+Compilação com êxito.
+    0 Aviso(s)
+    0 Erro(s)
+```
+
+Command: `dotnet format --verify-no-changes` → exit 0, no output.
+
+Command: `dotnet test`
+
+```
+Resumo da execução de teste: Aprovado!
+  total: 59
+  falhou: 0
+  concluído com êxito: 59
+  ignorados: 0
+  duração: 1s 257ms
+```
+
+Part 3 has not been started.
