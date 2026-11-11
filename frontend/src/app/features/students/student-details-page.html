@@ -18,14 +18,22 @@
     </div>
   </header>
 
-  <dl class="details">
-    <dt>English level</dt>
-    <dd>{{ student.englishLevel | englishLevelLabel }}</dd>
-    <dt>Email</dt>
-    <dd>{{ student.email ?? '—' }}</dd>
-    <dt>Notes</dt>
-    <dd>{{ student.notes ?? '—' }}</dd>
-  </dl>
+  <section class="panel">
+    <dl class="details">
+      <div>
+        <dt>English level</dt>
+        <dd>{{ student.englishLevel | englishLevelLabel }}</dd>
+      </div>
+      <div>
+        <dt>Email</dt>
+        <dd>{{ student.email ?? '—' }}</dd>
+      </div>
+      <div class="wide">
+        <dt>Notes</dt>
+        <dd>{{ student.notes ?? '—' }}</dd>
+      </div>
+    </dl>
+  </section>
 
   <header class="page-header">
     <h2>Lesson plans</h2>

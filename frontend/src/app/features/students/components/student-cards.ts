@@ -38,7 +38,7 @@ import { StudentResponse } from '../student.model';
       </mat-card>
     }
   `,
-  styleUrl: './student-list.scss',
+  styleUrl: '../../../shared/layout/table-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentCards {

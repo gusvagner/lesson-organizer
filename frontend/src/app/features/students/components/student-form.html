@@ -1,15 +1,15 @@
 <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-  <mat-form-field>
+  <mat-form-field appearance="outline">
     <mat-label>Name</mat-label>
     <input matInput formControlName="name" required />
     <mat-error>{{ fieldError(form.controls.name, 'Name') }}</mat-error>
   </mat-form-field>
-  <mat-form-field class="email-field">
+  <mat-form-field appearance="outline" class="email-field">
     <mat-label>Email (optional)</mat-label>
     <input matInput type="email" formControlName="email" />
     <mat-error>{{ fieldError(form.controls.email, 'Email') }}</mat-error>
   </mat-form-field>
-  <mat-form-field class="level-field">
+  <mat-form-field appearance="outline" class="level-field">
     <mat-label>English level</mat-label>
     <mat-select formControlName="englishLevel" required>
       @for (level of levels; track level) {
@@ -18,7 +18,7 @@
     </mat-select>
     <mat-error>{{ fieldError(form.controls.englishLevel, 'English level') }}</mat-error>
   </mat-form-field>
-  <mat-form-field>
+  <mat-form-field appearance="outline">
     <mat-label>Notes (optional)</mat-label>
     <textarea matInput formControlName="notes" rows="4"></textarea>
     <mat-error>{{ fieldError(form.controls.notes, 'Notes') }}</mat-error>

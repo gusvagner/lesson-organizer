@@ -17,15 +17,28 @@ import { MatIconModule } from '@angular/material/icon';
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
-      padding: 48px 16px;
+      gap: var(--lo-space-3);
+      padding: var(--lo-space-12) var(--lo-space-6);
+      border: 1px dashed var(--lo-border);
+      border-radius: var(--lo-radius-lg);
+      background-color: var(--lo-surface);
+      color: var(--lo-text-muted);
       text-align: center;
-      color: var(--mat-sys-on-surface-variant);
     }
     .icon {
-      width: 48px;
-      height: 48px;
-      font-size: 48px;
+      width: 56px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background-color: var(--lo-primary-soft);
+      color: var(--lo-primary);
+      font-size: 28px;
+    }
+    p {
+      margin: 0;
+      max-width: 42ch;
+      color: var(--lo-text);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

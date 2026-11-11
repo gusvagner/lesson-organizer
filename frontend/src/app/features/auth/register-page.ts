@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
+import { AppLogo } from '../../core/layout/app-logo';
 import { failureMessage } from '../../core/feedback/feedback';
 import { ApiProblem } from '../../core/http/api-problem';
 import { fieldErrorMessage } from '../../shared/forms/field-error-message';
@@ -21,6 +22,7 @@ import { applyServerErrors } from '../../shared/forms/server-errors';
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    AppLogo,
   ],
   templateUrl: './register-page.html',
   styleUrl: './auth-page.scss',

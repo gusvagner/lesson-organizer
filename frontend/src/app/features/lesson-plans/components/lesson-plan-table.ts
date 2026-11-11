@@ -19,54 +19,56 @@ import { StatusSelect } from './status-select';
     StatusSelect,
   ],
   template: `
-    <table mat-table [dataSource]="plans()" [trackBy]="byId">
-      <ng-container matColumnDef="title">
-        <th mat-header-cell *matHeaderCellDef>Title</th>
-        <td mat-cell *matCellDef="let plan">
-          <a [routerLink]="['/lesson-plans', plan.id, 'edit']">{{ plan.title }}</a>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="student">
-        <th mat-header-cell *matHeaderCellDef>Student</th>
-        <td mat-cell *matCellDef="let plan">
-          <a [routerLink]="['/students', plan.studentId]">{{ plan.studentName }}</a>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="date">
-        <th mat-header-cell *matHeaderCellDef>Date</th>
-        <td mat-cell *matCellDef="let plan">{{ plan.lessonDate | lessonDateLabel }}</td>
-      </ng-container>
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
-        <td mat-cell *matCellDef="let plan">
-          <lo-status-select
-            [status]="plan.status"
-            [label]="'Status of ' + plan.title"
-            [disabled]="saving()"
-            (statusChange)="statusChange.emit({ id: plan.id, status: $event })"
-          />
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">Actions</span></th>
-        <td mat-cell *matCellDef="let plan" class="actions">
-          <button
-            mat-icon-button
-            class="delete-lesson-plan"
-            type="button"
-            [disabled]="saving()"
-            [attr.aria-label]="'Delete ' + plan.title"
-            (click)="remove.emit(plan)"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="columns()"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns()"></tr>
-    </table>
+    <div class="table-card">
+      <table mat-table [dataSource]="plans()" [trackBy]="byId">
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef>Title</th>
+          <td mat-cell *matCellDef="let plan">
+            <a [routerLink]="['/lesson-plans', plan.id, 'edit']">{{ plan.title }}</a>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="student">
+          <th mat-header-cell *matHeaderCellDef>Student</th>
+          <td mat-cell *matCellDef="let plan">
+            <a [routerLink]="['/students', plan.studentId]">{{ plan.studentName }}</a>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let plan">{{ plan.lessonDate | lessonDateLabel }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let plan">
+            <lo-status-select
+              [status]="plan.status"
+              [label]="'Status of ' + plan.title"
+              [disabled]="saving()"
+              (statusChange)="statusChange.emit({ id: plan.id, status: $event })"
+            />
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">Actions</span></th>
+          <td mat-cell *matCellDef="let plan" class="actions">
+            <button
+              mat-icon-button
+              class="delete-lesson-plan"
+              type="button"
+              [disabled]="saving()"
+              [attr.aria-label]="'Delete ' + plan.title"
+              (click)="remove.emit(plan)"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+      </table>
+    </div>
   `,
-  styleUrl: './lesson-plan-list.scss',
+  styleUrl: '../../../shared/layout/table-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LessonPlanTable {

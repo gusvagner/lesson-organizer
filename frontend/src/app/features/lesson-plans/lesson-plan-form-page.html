@@ -18,13 +18,15 @@
       (action)="goToNewStudent()"
     />
   } @else if (!id() || plan()) {
-    <lo-lesson-plan-form
-      [plan]="plan()"
-      [students]="studentsStore.students()"
-      [preselectedStudentId]="preselectedStudentId()"
-      [saving]="submission.active()"
-      [problem]="problem()"
-      (save)="save($event)"
-    />
+    <section class="panel">
+      <lo-lesson-plan-form
+        [plan]="plan()"
+        [students]="studentsStore.students()"
+        [preselectedStudentId]="preselectedStudentId()"
+        [saving]="submission.active()"
+        [problem]="problem()"
+        (save)="save($event)"
+      />
+    </section>
   }
 }
