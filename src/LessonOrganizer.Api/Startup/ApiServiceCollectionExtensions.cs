@@ -10,6 +10,7 @@ using LessonOrganizer.Infrastructure;
 using LessonOrganizer.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,6 +29,7 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentTeacher, ClaimsCurrentTeacher>();
         services.AddScoped<IAuthSession, IdentityAuthSession>();
+        services.Configure<KestrelServerOptions>(kestrel => kestrel.Limits.MaxRequestBodySize = RequestBodyLimit.MaxBytes);
         AddDataProtection(services, configuration);
         AddCookieAuthentication(services);
         services.AddAuthorizationBuilder()

@@ -271,7 +271,7 @@ Done on the finished app, backend and frontend, by reading the code and running 
 
 | Area | Check |
 |---|---|
-| Authorization | Every endpoint requires a session by default (fallback policy); only `csrf`, `register`, `login` and the Angular static files are anonymous. A test lists all controller actions and fails if a new one is anonymous by accident. An unknown `/api/...` path returns 404, never the Angular `index.html`. |
+| Authorization | Every endpoint requires a session by default (fallback policy); only `csrf`, `register`, `login`, `me` (204 without a session, so a logged-out page load is not a console error) and the Angular static files are anonymous. A test lists all controller actions and fails if a new one is anonymous by accident. An unknown `/api/...` path returns 404, never the Angular `index.html`. |
 | Data isolation | Teacher id only from the `NameIdentifier` claim; no request type has a `teacherId`. Teacher B gets 404 on every operation on A's data, and 400 when referencing A's student (integration tests). |
 | Session cookie | `HttpOnly`, `Secure`, `SameSite=Strict`, 8 h sliding expiration; 401 instead of redirects; logout removes the cookie. |
 | CSRF | Antiforgery validated on every unsafe method, `login` and `register` included; token refreshed after login and logout. |
@@ -280,7 +280,7 @@ Done on the finished app, backend and frontend, by reading the code and running 
 | Input | Length limits, enum checks (numeric values included), date format, request body size limit, malformed JSON → 400 without internal details. |
 | Errors and logs | No stack traces or exception messages in responses outside `Development`; logs contain no passwords, hashes, cookies, tokens or connection strings. |
 | Database | Queries only through EF Core (parameterized); no SQL built from strings. Connection string from user secrets or environment, never committed; `.env` git-ignored, `.env.example` has placeholders only. SQL Server port published on `127.0.0.1` only. The demo connects as `sa`: accepted risk for a local demo, listed in the README. |
-| Transport and headers | `dotnet run` uses HTTPS; the Docker demo is plain HTTP on `localhost` only, where Chrome, Edge and Firefox accept `Secure` cookies (checked at stage 12); a real deployment puts TLS in front (accepted risk). `X-Content-Type-Options: nosniff`; no CORS policy (same origin). The `app` container runs as a non-root user. |
+| Transport and headers | `dotnet run` uses HTTPS; the Docker demo is plain HTTP on `localhost` only, where Chrome, Edge and Firefox accept `Secure` cookies (checked at stage 12); a real deployment puts TLS in front (accepted risk). `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and a Content-Security-Policy with `script-src 'self'`; no CORS policy (same origin). The `app` container runs as a non-root user. |
 | Frontend | No `innerHTML` or `bypassSecurityTrust*`; no credentials in `localStorage`/`sessionStorage`; `returnUrl` accepted only if it is an app path (starts with `/`, not `//`), so login cannot redirect off-site. |
 | Secrets and demo data | No secrets in the repository or the image; seed runs only when `Seed:DemoData` is `true` (off by default); demo passwords exist only in the README and the seed. Data protection keys live in a volume, not in the image. |
 | Dependencies | Known-vulnerable package check (`dotnet list package --vulnerable`, `npm audit`) and base image updates query package feeds or registries, so the human runs or approves them; result recorded. |

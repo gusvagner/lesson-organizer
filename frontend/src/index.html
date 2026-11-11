@@ -7,16 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <script>
-      try {
-        var mode = localStorage.getItem('lo-theme');
-        if (mode === 'light' || mode === 'dark') {
-          document.documentElement.style.colorScheme = mode;
-        }
-      } catch (error) {
-        document.documentElement.style.colorScheme = '';
-      }
-    </script>
+    <script src="theme-init.js"></script>
   </head>
   <body>
     <lo-root></lo-root>

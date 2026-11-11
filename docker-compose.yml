@@ -25,6 +25,7 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      AllowedHosts: "localhost;127.0.0.1"
       ConnectionStrings__LessonOrganizer: "Server=db,1433;Database=LessonOrganizer;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true"
       Database__MigrateOnStartup: "true"
       Seed__DemoData: "true"

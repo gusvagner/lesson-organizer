@@ -144,11 +144,14 @@ Built with Claude Code under human review. Every relevant interaction is logged 
 
 ## Known limitations
 
-The security review (stage 13) completes this list.
+From the security review ([docs/security-review.md](docs/security-review.md)), accepted for a local demo:
 
 - The demo runs over plain HTTP on `localhost`. The session cookie is marked `Secure`; Chrome, Edge and Firefox accept it on `localhost`, Safari does not, so use one of the first three for the demo.
 - The app connects to SQL Server as `sa` (demo only).
 - Data protection keys are stored unencrypted in the `dp-keys` volume.
 - Last write wins: no concurrency token on edits.
+- The Content-Security-Policy allows inline styles (`style-src 'unsafe-inline'`), which Angular and Angular Material need for component styles; scripts are limited to the app's own files.
 - The login rate limit is per client IP and per app instance.
 - Anyone who knows a teacher's email can trigger that account's lockout (5 wrong passwords, 15 minutes).
+- Register answers 409 for an email that already has an account, so it reveals which emails are registered.
+- Logout removes the session cookie from the browser but does not revoke it on the server; a copied cookie stays valid until it expires (8 h without use).
