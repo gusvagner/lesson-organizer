@@ -125,13 +125,13 @@ The interface must be simple, responsive, and in English.
 - An action to create a lesson plan with the student already selected.
 
 ### Lesson plans
-- Main page showing all lesson plans belonging to the authenticated teacher.
+- Main page showing all lesson plans belonging to the authenticated teacher as a board with one column per status (To prepare, Ready, Delivered).
 - Each item displays its title, student, date, and status.
 - Filters by student and status.
-- Default sorting by lesson date in ascending order.
+- Default sorting by lesson date in ascending order (inside each column). The status filter shows only that status column.
 - Create and edit form.
 - Student selection restricted to the teacher's own students.
-- Status updates.
+- Status updates: drag a card to another column, or use the status select on the card (keyboard and screen-reader alternative).
 - Deletion confirmation.
 
 If no students have been registered, guide the teacher to create a student before creating a lesson plan.

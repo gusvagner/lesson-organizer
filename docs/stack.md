@@ -179,11 +179,14 @@ Verified on 2026-11-10 with `npx ng version` after `npx @angular/cli@22 new` (np
 
 ### UI components
 
-**Angular Material 22** (with Angular CDK 22), added with `ng add @angular/material` at stage 9. Material 3 theme with light and dark from the system setting. See [ADR 0002](decisions/0002-angular-material.md).
+**Angular Material 22** (with Angular CDK 22), added with `ng add @angular/material` at stage 9. Material 3 theme generated from the DESIGN.md primary color (`ng generate @angular/material:theme-color`), light and dark from the system setting plus a toolbar toggle. See [ADR 0002](decisions/0002-angular-material.md) and [DESIGN.md](../DESIGN.md).
+
+Fonts and icons are bundled from npm, nothing loads from a CDN: `@fontsource-variable/inter` (Inter Variable) and `material-symbols` (Material Symbols Rounded). Added on 2026-11-10 with the human's approval.
 
 | Need from the requirements | Material component |
 |---|---|
-| Lists of students and lesson plans | `mat-table` on wide screens, `mat-list`/cards on phone width |
+| Lists of students | `mat-table` on wide screens, cards on phone width |
+| Lesson plans main page | Board built with CDK drag-drop (`cdkDropListGroup`, `cdkDropList`, `cdkDrag`) |
 | Create and edit forms, validation messages | `mat-form-field`, `mat-input`, `mat-select`, `mat-datepicker`, `mat-error` |
 | Deletion confirmation | `MatDialog` |
 | Success and error messages | `MatSnackBar` |

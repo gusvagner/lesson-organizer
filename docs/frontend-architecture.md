@@ -26,7 +26,8 @@ frontend/src/app/
 │   │                        safe-return-url.ts, page-reloader.ts, testing/ (FakeAuthApi, FakePageReloader)
 │   ├── http/                api-problem.ts (error parsing), outcome.ts, unauthorized-interceptor.ts, xsrf-retry-interceptor.ts
 │   ├── feedback/            feedback.ts (snackbar messages)
-│   └── layout/              shell.ts (toolbar, nav, user menu, router outlet), viewport.ts (handset breakpoint)
+│   └── layout/              shell.ts (toolbar, nav, theme toggle, user menu, router outlet), viewport.ts (handset breakpoint),
+│                            theme.ts (light/dark: system + toggle, stored as lo-theme), app-logo.ts (SVG mark)
 ├── shared/
 │   ├── confirm-dialog/      confirm-dialog.ts: generic "Are you sure?" MatDialog
 │   ├── empty-state/         empty-state.ts: icon + message + optional action
@@ -53,9 +54,10 @@ frontend/src/app/
         ├── lesson-plans-store.ts
         ├── lesson-plan.model.ts     LessonPlanResponse, LessonPlanRequest, LessonPlanFilter, LessonPlanStatus
         ├── lesson-plan-query.ts     URL query params → LessonPlanFilter
-        ├── lesson-plan-list-page.ts filters + list + inline status change
+        ├── lesson-plan-list-page.ts filters + board (drag between status columns) + status select on cards
         ├── lesson-plan-form-page.ts create and edit
-        ├── components/              lesson-plan-table.ts, lesson-plan-cards.ts, lesson-plan-filters.ts,
+        ├── components/              lesson-plan-board.ts + lesson-plan-board-card.ts (CDK drag-drop, list page),
+        │                            lesson-plan-table.ts, lesson-plan-cards.ts (student details), lesson-plan-filters.ts,
         │                            lesson-plan-form.ts, status-select.ts (presentational)
         └── testing/                 fake-lesson-plans-api.ts
 ```
@@ -149,7 +151,8 @@ Top `mat-toolbar` inside the shell: app name, "Lesson plans", "Students", and a 
 
 - Enum labels through pipes: `ToPrepare` → "To prepare", `UpperIntermediate` → "Upper intermediate".
 - `lessonDate` stays a `yyyy-MM-dd` string in models. `lesson-date.ts` converts to a local `Date` for the datepicker and display, never through `new Date('yyyy-MM-dd')`, which is parsed as UTC and can show the previous day.
-- Lists: `mat-table` on wide screens, cards at phone width (CDK `BreakpointObserver`, `Handset`).
+- Lists: `mat-table` on wide screens, cards at phone width (CDK `BreakpointObserver`, `Handset`). The lesson plans page is a board instead: three columns (stacked under 900 px), cards sorted by date, dropping a card in another column calls the same status change as the select. Status changes are optimistic: the store moves the card at once and moves it back if the PATCH fails.
+- Look and theme: [DESIGN.md](../DESIGN.md). Colors come from `--lo-*` variables (`frontend/src/styles/_tokens.scss`, `light-dark()`), never raw values.
 
 ## Tests
 
@@ -162,6 +165,8 @@ Run with `npm test` (CLI default runner). Fakes are named classes (`FakeStudents
 | `unauthorizedInterceptor` | 401 clears the user and reloads `/login?returnUrl=…`; auth endpoints and other errors pass through |
 | `server-errors.ts`, `lesson-date.ts`, label pipes | field mapping; date conversion without day shifts; labels |
 | Student form, lesson plan form | required and length messages; submit disabled while saving; server field errors shown; student preselected from `?studentId=` |
-| Lesson plan list page | filters written to and read from the URL; empty states; inline status change disabled while saving |
+| Lesson plan list page | filters written to and read from the URL; board columns (all, or only the filtered status); empty states; status change disabled while saving |
+| Lesson plan board | cards in their status column sorted by date; drop in another column emits the status change; same column emits nothing; drag disabled while saving |
+| Theme | system default; toggle stores the choice; blocked storage still toggles |
 
 Naming: `describe('<unit>')` + `it('<scenario> → <expected result>')`.
