@@ -28,7 +28,7 @@ A small planner for teachers who give private English lessons. A teacher registe
 ### Demo (one command)
 
 ```bash
-cp .env.example .env          # then set MSSQL_SA_PASSWORD (8+ chars, upper, lower, digit, symbol)
+cp .env.example .env          # then set MSSQL_SA_PASSWORD (8+ chars with upper, lower, digit, symbol; avoid ; ' " $)
 docker compose up --build
 ```
 
@@ -36,7 +36,7 @@ Open **http://localhost:8080** and log in with a demo account below. The first s
 
 - Stop: `Ctrl+C`, or `docker compose stop`.
 - Start again: `docker compose up` (data and login sessions are kept).
-- Reset to a fresh seed: `docker compose down -v` (deletes the database volume), then `docker compose up`.
+- Reset to a fresh seed: `docker compose down -v` (deletes the database volume, including any development data, since development uses the same `db` service), then `docker compose up`.
 
 ### Development
 
@@ -80,19 +80,19 @@ cd frontend && npx ng test --watch=false      # frontend, 197 tests
 
 ```bash
 dotnet test --coverage --coverage-output-format cobertura --coverage-settings coverage.settings.xml
-node tools/coverage-summary.mjs               # merges the per-project reports in TestResults/
+node tools/coverage-summary.mjs               # merges the latest run's per-project reports in TestResults/
 cd frontend && npx ng test --watch=false --coverage   # HTML report in frontend/coverage/
 ```
 
-Measured on 2026-11-10 (generated EF Core migrations excluded):
+Measured on 2026-11-10 on the code of this README (218 backend tests; generated EF Core migrations excluded):
 
 | Module | Line coverage |
 |---|---|
 | LessonOrganizer.Domain | 100.0% |
 | LessonOrganizer.Application | 100.0% |
-| LessonOrganizer.Api | 98.3% |
+| LessonOrganizer.Api | 98.4% |
 | LessonOrganizer.Infrastructure | 92.7% |
-| **Backend total** | **97.1%** (826 / 851 lines) |
+| **Backend total** | **97.1%** (849 / 874 lines) |
 | **Frontend** (Angular, Vitest) | **91.7%** lines, 91.9% branches |
 
 ## Architecture
