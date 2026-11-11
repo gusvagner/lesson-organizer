@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*LessonOrganizer\.(Domain|Application|Infrastructure|Api)\.dll$</ModulePath>
+      </Include>
+    </ModulePaths>
+    <Functions>
+      <Exclude>
+        <Function>^LessonOrganizer\.Infrastructure\.Persistence\.Migrations\..*</Function>
+      </Exclude>
+    </Functions>
+    <Attributes>
+      <Exclude>
+        <Attribute>^System\.CodeDom\.Compiler\.GeneratedCodeAttribute$</Attribute>
+        <Attribute>^System\.Diagnostics\.CodeAnalysis\.ExcludeFromCodeCoverageAttribute$</Attribute>
+      </Exclude>
+    </Attributes>
+  </CodeCoverage>
+</Configuration>

@@ -10,6 +10,7 @@ obj/
 TestResults/
 *.coverage
 coverage*.xml
+!coverage.settings.xml
 appsettings.*.local.json
 
 # Angular / Node
