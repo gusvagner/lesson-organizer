@@ -167,3 +167,16 @@ The generating agent dispatched a fresh reviewer subagent, pasted its report as 
 **The final reviewer (whole project):** 0 Critical, 1 Important, 7 Minor; found every requirement implemented and called the agent's self-review honest with five omissions, which the agent then added (items 14–18). Decisions: I1 the script loses its executable bit when committed from Windows → `RUNNING.md` invokes it with `bash` (agree); M1 duplicated issuer/audience and connection-string key (fixed); M2 status list built twice (declined: merging would make the validator depend on the HTTP layer — agree); M3 whole-body errors untested (tests added; the agent and the reviewer both expected the wrong key for truncated JSON, and the agent corrected its expectation instead of the code — agree); M4 three auth cases added (they passed on first run; logged honestly); M5 delete returns an unused id (declined, as in part 2); M6/M7 wait-loop timeout and script argument checks (fixed).
 
 **Result:** part 5 accepted. Generation finished: 5 parts, 168 tests, independent review in every part from part 1 on, and the run instructions verified by a person following them.
+
+## Triage (2026-11-11)
+
+Decided by the human after part 5:
+
+| Finding | Decision | Why |
+|---|---|---|
+| A POST body with an unknown property (e.g. `status`) is accepted and the property silently ignored | **Accepted as is** | The default System.Text.Json behaviour; new tasks always start as `Todo`, as the prompt asks, and nothing leaks |
+| An identical PUT still moves `updatedAt` | **Accepted as is** | PUT replaces the resource; the time records the last write, not the last change |
+| The database accepts a title made only of tabs or line breaks; the validator rejects it | **Accepted as is** | Every write goes through the API's validator; the check constraint catches the common blank case |
+| An OpenAPI document and a Scalar page | **Not added** | Not asked by the exercise; `RUNNING.md` documents every endpoint with a working request |
+
+All other open points were already decided in the parts (each with its reason in `generation-log.md`).
