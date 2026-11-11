@@ -9,6 +9,7 @@ using LessonOrganizer.Application.Students;
 using LessonOrganizer.Infrastructure;
 using LessonOrganizer.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +28,7 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentTeacher, ClaimsCurrentTeacher>();
         services.AddScoped<IAuthSession, IdentityAuthSession>();
+        AddDataProtection(services, configuration);
         AddCookieAuthentication(services);
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
@@ -35,6 +37,16 @@ public static class ApiServiceCollectionExtensions
         services.AddProblemDetails();
         AddAuthRateLimiter(services, configuration);
         return services;
+    }
+
+    private static void AddDataProtection(IServiceCollection services, IConfiguration configuration)
+    {
+        var dataProtection = services.AddDataProtection().SetApplicationName("LessonOrganizer");
+        var keysPath = configuration["DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(keysPath))
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
     }
 
     private static string RequiredConnectionString(IConfiguration configuration) =>
