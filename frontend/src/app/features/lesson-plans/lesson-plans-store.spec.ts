@@ -47,6 +47,27 @@ describe('LessonPlansStore', () => {
     expect(store.saving()).toBe(false);
   });
 
+  it('changeStatus pending → item already shows the new status', async () => {
+    await store.load({ studentId: null, status: null });
+    const gate = api.responder.hold('changeStatus');
+    const pending = store.changeStatus('p1', 'Delivered');
+    expect(store.plans()[0].status).toBe('Delivered');
+    gate.next();
+    await pending;
+    expect(store.plans()[0].status).toBe('Delivered');
+  });
+
+  it('changeStatus failure after the optimistic update → item back to the old status', async () => {
+    await store.load({ studentId: null, status: null });
+    const gate = api.responder.hold('changeStatus');
+    api.responder.fail('changeStatus', 500);
+    const pending = store.changeStatus('p1', 'Delivered');
+    expect(store.plans()[0].status).toBe('Delivered');
+    gate.next();
+    await pending;
+    expect(store.plans()[0].status).toBe('ToPrepare');
+  });
+
   it('changeStatus failure → list unchanged, problem returned', async () => {
     await store.load({ studentId: null, status: null });
     api.responder.fail('changeStatus', 404);

@@ -51,9 +51,17 @@ export class LessonPlansStore {
   }
 
   changeStatus(id: string, status: LessonPlanStatus): Promise<Outcome<LessonPlanResponse>> {
-    return this.writes.run(async () =>
-      this.keep(await toOutcome(this.api.changeStatus(id, status))),
-    );
+    const previous = this.items().find((plan) => plan.id === id);
+    if (previous !== undefined) {
+      this.replace({ ...previous, status });
+    }
+    return this.writes.run(async () => {
+      const outcome = this.keep(await toOutcome(this.api.changeStatus(id, status)));
+      if (!outcome.ok && previous !== undefined) {
+        this.replace(previous);
+      }
+      return outcome;
+    });
   }
 
   remove(id: string): Promise<Outcome<void>> {
@@ -68,10 +76,13 @@ export class LessonPlansStore {
 
   private keep(outcome: Outcome<LessonPlanResponse>): Outcome<LessonPlanResponse> {
     if (outcome.ok) {
-      const saved = outcome.value;
-      this.items.update((plans) => plans.map((plan) => (plan.id === saved.id ? saved : plan)));
-      this.current.update((plan) => (plan?.id === saved.id ? saved : plan));
+      this.replace(outcome.value);
     }
     return outcome;
+  }
+
+  private replace(saved: LessonPlanResponse): void {
+    this.items.update((plans) => plans.map((plan) => (plan.id === saved.id ? saved : plan)));
+    this.current.update((plan) => (plan?.id === saved.id ? saved : plan));
   }
 }
