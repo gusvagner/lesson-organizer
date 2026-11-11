@@ -21,10 +21,31 @@ import { LESSON_PLAN_STATUSES, LessonPlanStatus } from '../lesson-plan.model';
   `,
   styles: `
     :host {
-      display: inline-block;
-      min-width: 120px;
+      --strong: var(--lo-status-to-prepare);
+      --soft: var(--lo-status-to-prepare-soft);
+      display: inline-flex;
+    }
+    :host([data-status='Ready']) {
+      --strong: var(--lo-status-ready);
+      --soft: var(--lo-status-ready-soft);
+    }
+    :host([data-status='Delivered']) {
+      --strong: var(--lo-status-delivered);
+      --soft: var(--lo-status-delivered-soft);
+    }
+    .status-select {
+      --mat-select-enabled-trigger-text-color: var(--strong);
+      --mat-select-enabled-arrow-color: var(--strong);
+      min-width: 132px;
+      padding: 4px 10px 4px 14px;
+      border-radius: var(--lo-radius-full);
+      background-color: var(--soft);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 20px;
     }
   `,
+  host: { '[attr.data-status]': 'status()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StatusSelect {

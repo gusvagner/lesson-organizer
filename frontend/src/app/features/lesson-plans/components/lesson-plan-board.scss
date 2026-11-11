@@ -1,0 +1,104 @@
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--lo-space-4);
+  align-items: start;
+
+  &.single {
+    grid-template-columns: minmax(0, 520px);
+  }
+}
+
+.column {
+  --status: var(--lo-status-to-prepare);
+  display: flex;
+  flex-direction: column;
+  gap: var(--lo-space-3);
+  padding: var(--lo-space-3);
+  border-radius: var(--lo-radius-lg);
+  background-color: var(--lo-surface-sunken);
+
+  &[data-status='Ready'] {
+    --status: var(--lo-status-ready);
+  }
+
+  &[data-status='Delivered'] {
+    --status: var(--lo-status-delivered);
+  }
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: var(--lo-space-2);
+  padding: var(--lo-space-1) var(--lo-space-1) 0;
+
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+  }
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--status);
+}
+
+.count {
+  margin-left: auto;
+  min-width: 24px;
+  padding: 0 8px;
+  border-radius: var(--lo-radius-full);
+  background-color: var(--lo-surface);
+  color: var(--lo-text-muted);
+  font-size: 13px;
+  line-height: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lo-space-3);
+  min-height: 96px;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--lo-space-6) var(--lo-space-2);
+  border: 1px dashed var(--lo-border);
+  border-radius: var(--lo-radius-md);
+  color: var(--lo-text-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.placeholder {
+  min-height: 96px;
+  border: 2px dashed var(--lo-accent);
+  border-radius: var(--lo-radius-lg);
+  background-color: color-mix(in srgb, var(--lo-accent) 8%, transparent);
+}
+
+.cdk-drag-preview {
+  border-radius: var(--lo-radius-lg);
+  box-shadow: var(--lo-shadow-raised);
+  transform: rotate(1.5deg);
+}
+
+.cdk-drag-animating,
+.cards.cdk-drop-list-dragging .drag:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+@media (max-width: 899px) {
+  .board,
+  .board.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

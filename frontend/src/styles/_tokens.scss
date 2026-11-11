@@ -1,0 +1,38 @@
+:root {
+  --lo-page: light-dark(#f4f6fa, #0b1220);
+  --lo-surface: light-dark(#ffffff, #121b2e);
+  --lo-surface-sunken: light-dark(#ebeff6, #0f1728);
+  --lo-border: light-dark(#dce2ec, #26324a);
+  --lo-text: light-dark(#0b1220, #e8ecf4);
+  --lo-text-muted: light-dark(#5b6475, #9aa4b8);
+  --lo-primary: light-dark(#2b50ba, #86a0ee);
+  --lo-primary-soft: light-dark(#e8edfa, #1a2850);
+  --lo-accent: light-dark(#ff7633, #ff8a50);
+  --lo-error: light-dark(#b42318, #f97066);
+
+  --lo-status-to-prepare: light-dark(#b45309, #fbbf24);
+  --lo-status-to-prepare-soft: light-dark(#fef3c7, #3a2a08);
+  --lo-status-ready: light-dark(#2b50ba, #86a0ee);
+  --lo-status-ready-soft: light-dark(#e8edfa, #1a2850);
+  --lo-status-delivered: light-dark(#15803d, #4ade80);
+  --lo-status-delivered-soft: light-dark(#dcfce7, #0e2e1b);
+
+  --lo-radius-sm: 8px;
+  --lo-radius-md: 12px;
+  --lo-radius-lg: 16px;
+  --lo-radius-full: 999px;
+
+  --lo-shadow-card: light-dark(0 1px 2px rgb(11 18 32 / 6%), none);
+  --lo-shadow-raised: light-dark(0 8px 24px rgb(11 18 32 / 14%), 0 8px 24px rgb(0 0 0 / 45%));
+
+  --lo-space-1: 4px;
+  --lo-space-2: 8px;
+  --lo-space-3: 12px;
+  --lo-space-4: 16px;
+  --lo-space-6: 24px;
+  --lo-space-8: 32px;
+  --lo-space-12: 48px;
+  --lo-content-width: 1200px;
+
+  --lo-font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}

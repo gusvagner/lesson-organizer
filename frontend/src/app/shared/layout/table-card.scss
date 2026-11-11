@@ -1,0 +1,59 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lo-space-3);
+}
+
+.table-card {
+  overflow-x: auto;
+  border: 1px solid var(--lo-border);
+  border-radius: var(--lo-radius-lg);
+  background-color: var(--lo-surface);
+  box-shadow: var(--lo-shadow-card);
+}
+
+table {
+  width: 100%;
+  --mat-table-background-color: var(--lo-surface);
+  --mat-table-row-item-outline-color: var(--lo-border);
+}
+
+th.mat-mdc-header-cell {
+  background-color: var(--lo-surface-sunken);
+  color: var(--lo-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+td.mat-mdc-cell a {
+  color: var(--lo-text);
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--lo-primary);
+  }
+}
+
+tr.mat-mdc-row:hover {
+  background-color: var(--lo-surface-sunken);
+}
+
+.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+mat-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

@@ -53,7 +53,7 @@ import { StatusSelect } from './status-select';
       </mat-card>
     }
   `,
-  styleUrl: './lesson-plan-list.scss',
+  styleUrl: '../../../shared/layout/table-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LessonPlanCards {

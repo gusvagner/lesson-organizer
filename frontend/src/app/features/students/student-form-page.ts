@@ -29,12 +29,14 @@ import { StudentsStore } from './students-store';
     </a>
     <h1>{{ id() ? 'Edit student' : 'New student' }}</h1>
     @if (id() === undefined || student()) {
-      <lo-student-form
-        [student]="student()"
-        [saving]="submission.active()"
-        [problem]="problem()"
-        (save)="save($event)"
-      />
+      <section class="panel">
+        <lo-student-form
+          [student]="student()"
+          [saving]="submission.active()"
+          [problem]="problem()"
+          (save)="save($event)"
+        />
+      </section>
     }
   `,
   styleUrl: '../../shared/layout/page.scss',

@@ -1,5 +1,5 @@
 <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-  <mat-form-field class="student-field">
+  <mat-form-field appearance="outline" class="student-field">
     <mat-label>Student</mat-label>
     <mat-select formControlName="studentId" required>
       @for (student of students(); track student.id) {
@@ -8,12 +8,12 @@
     </mat-select>
     <mat-error>{{ fieldError(form.controls.studentId, 'Student') }}</mat-error>
   </mat-form-field>
-  <mat-form-field>
+  <mat-form-field appearance="outline">
     <mat-label>Title</mat-label>
     <input matInput formControlName="title" required />
     <mat-error>{{ fieldError(form.controls.title, 'Title') }}</mat-error>
   </mat-form-field>
-  <mat-form-field>
+  <mat-form-field appearance="outline">
     <mat-label>Lesson date</mat-label>
     <input matInput formControlName="lessonDate" [matDatepicker]="picker" required />
     <mat-hint>MM/DD/YYYY</mat-hint>
@@ -21,7 +21,7 @@
     <mat-datepicker #picker />
     <mat-error>{{ fieldError(form.controls.lessonDate, 'Lesson date') }}</mat-error>
   </mat-form-field>
-  <mat-form-field>
+  <mat-form-field appearance="outline">
     <mat-label>Description (optional)</mat-label>
     <textarea matInput formControlName="description" rows="8"></textarea>
     <mat-error>{{ fieldError(form.controls.description, 'Description') }}</mat-error>

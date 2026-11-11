@@ -1,3 +1,4 @@
+import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -9,6 +10,7 @@ import { aStudent } from '../students/testing/fake-students-api';
 import { LessonPlanFilters } from './components/lesson-plan-filters';
 import { StatusSelect } from './components/status-select';
 import { LessonPlanListPage } from './lesson-plan-list-page';
+import { LessonPlanResponse, LessonPlanStatus } from './lesson-plan.model';
 import { aLessonPlan } from './testing/fake-lesson-plans-api';
 
 const ANA = '01a1c6e4-b0ef-7355-873b-c8c3fed7c18d';
@@ -64,6 +66,19 @@ describe('LessonPlanListPage', () => {
     expect(text).toContain('Nov 12, 2026');
   });
 
+  it('board with three columns: To prepare, Ready, Delivered', async () => {
+    const root = await open('/lesson-plans');
+    const headings = Array.from(root.querySelectorAll('section[data-status] h2')).map(textOf);
+    expect(headings).toEqual(['To prepare', 'Ready', 'Delivered']);
+    expect(root.querySelector('table')).toBeNull();
+  });
+
+  it('?status=Ready → only the Ready column', async () => {
+    const root = await open('/lesson-plans?status=Ready');
+    const headings = Array.from(root.querySelectorAll('section[data-status] h2')).map(textOf);
+    expect(headings).toEqual(['Ready']);
+  });
+
   it('?studentId=<guid>&status=Ready → loads with both', async () => {
     await open(`/lesson-plans?studentId=${BRUNO}&status=Ready`);
     expect(pageFakes().plans.filters.at(-1)).toEqual({ studentId: BRUNO, status: 'Ready' });
@@ -106,15 +121,47 @@ describe('LessonPlanListPage', () => {
   it('status change → select disabled while saving, then "Status changed to Ready"', async () => {
     await open('/lesson-plans');
     const gate = pageFakes().plans.responder.hold('changeStatus');
-    const select = harness.fixture.debugElement.query(By.directive(StatusSelect));
-    (select.componentInstance as StatusSelect).statusChange.emit('Ready');
+    const selectOf = (title: string) =>
+      harness.fixture.debugElement
+        .queryAll(By.directive(StatusSelect))
+        .map((debug) => debug.componentInstance as StatusSelect)
+        .find((select) => select.label() === `Status of ${title}`)!;
+    selectOf('Present perfect').statusChange.emit('Ready');
     await harness.fixture.whenStable();
-    expect((select.componentInstance as StatusSelect).disabled()).toBe(true);
+    const ready = harness.routeNativeElement!.querySelector('section[data-status="Ready"]')!;
+    expect(textOf(ready)).toContain('Present perfect');
+    expect(selectOf('Present perfect').disabled()).toBe(true);
     gate.next();
     await settle();
     await harness.fixture.whenStable();
     expect(pageFakes().feedback.messages).toEqual(['Status changed to Ready']);
-    expect((select.componentInstance as StatusSelect).disabled()).toBe(false);
+    expect(selectOf('Present perfect').disabled()).toBe(false);
+  });
+
+  it('drop on Ready, save fails → card moves, then returns to To prepare with the error message', async () => {
+    const root = await open('/lesson-plans');
+    const gate = pageFakes().plans.responder.hold('changeStatus');
+    pageFakes().plans.responder.fail('changeStatus', 500);
+    const lists = harness.fixture.debugElement
+      .queryAll(By.directive(CdkDropList))
+      .map((debug) => debug.injector.get(CdkDropList) as CdkDropList<LessonPlanStatus>);
+    const source = lists.find((list) => list.data === 'ToPrepare')!;
+    const target = lists.find((list) => list.data === 'Ready')!;
+    const plan = pageFakes().plans.plans.find((candidate) => candidate.id === 'p1')!;
+    target.dropped.emit({
+      container: target,
+      previousContainer: source,
+      item: { data: plan },
+    } as unknown as CdkDragDrop<LessonPlanStatus, LessonPlanStatus, LessonPlanResponse>);
+    await harness.fixture.whenStable();
+    const column = (status: string) => root.querySelector(`section[data-status="${status}"]`)!;
+    expect(textOf(column('Ready'))).toContain('Present perfect');
+    gate.next();
+    await settle();
+    await harness.fixture.whenStable();
+    expect(textOf(column('ToPrepare'))).toContain('Present perfect');
+    expect(textOf(column('Ready'))).not.toContain('Present perfect');
+    expect(pageFakes().feedback.messages).toEqual(['Something went wrong. Try again.']);
   });
 
   it('delete confirmed → "Lesson plan deleted" and the row is gone', async () => {

@@ -12,15 +12,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Feedback } from '../../core/feedback/feedback';
-import { Viewport } from '../../core/layout/viewport';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { StudentsStore } from '../students/students-store';
-import { LessonPlanCards } from './components/lesson-plan-cards';
 import { StatusChange } from './components/lesson-plan-events';
+import { LessonPlanBoard } from './components/lesson-plan-board';
 import { LessonPlanFilters } from './components/lesson-plan-filters';
-import { LessonPlanTable } from './components/lesson-plan-table';
 import { LessonPlanActions } from './lesson-plan-actions';
-import { LessonPlanFilter, LessonPlanResponse } from './lesson-plan.model';
+import { LESSON_PLAN_STATUSES, LessonPlanFilter, LessonPlanResponse } from './lesson-plan.model';
 import { filterFromQuery, isFiltered } from './lesson-plan-query';
 import { LessonPlansStore } from './lesson-plans-store';
 
@@ -31,9 +29,8 @@ import { LessonPlansStore } from './lesson-plans-store';
     MatButtonModule,
     MatIconModule,
     EmptyState,
-    LessonPlanCards,
+    LessonPlanBoard,
     LessonPlanFilters,
-    LessonPlanTable,
   ],
   templateUrl: './lesson-plan-list-page.html',
   styleUrl: '../../shared/layout/page.scss',
@@ -46,13 +43,16 @@ export class LessonPlanListPage {
   private readonly actions = inject(LessonPlanActions);
   protected readonly store = inject(LessonPlansStore);
   protected readonly studentsStore = inject(StudentsStore);
-  protected readonly viewport = inject(Viewport);
 
   readonly studentId = input<string | undefined>();
   readonly status = input<string | undefined>();
 
   protected readonly filter = computed(() => filterFromQuery(this.studentId(), this.status()));
   protected readonly filtered = computed(() => isFiltered(this.filter()));
+  protected readonly columns = computed(() => {
+    const status = this.filter().status;
+    return status === null ? LESSON_PLAN_STATUSES : [status];
+  });
   protected readonly loaded = signal(false);
   protected readonly hasStudents = computed(() => this.studentsStore.students().length > 0);
 

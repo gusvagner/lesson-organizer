@@ -11,7 +11,7 @@ import { isFiltered } from '../lesson-plan-query';
   selector: 'lo-lesson-plan-filters',
   imports: [MatButtonModule, MatFormFieldModule, MatSelectModule, LessonPlanStatusLabel],
   template: `
-    <mat-form-field>
+    <mat-form-field appearance="outline">
       <mat-label>Student</mat-label>
       <mat-select
         class="student-filter"
@@ -24,7 +24,7 @@ import { isFiltered } from '../lesson-plan-query';
         }
       </mat-select>
     </mat-form-field>
-    <mat-form-field>
+    <mat-form-field appearance="outline">
       <mat-label>Status</mat-label>
       <mat-select
         class="status-filter"

@@ -30,6 +30,8 @@
               }
             ],
             "styles": [
+              "@fontsource-variable/inter/index.css",
+              "material-icons/iconfont/round.css",
               "src/styles.scss"
             ]
           },
