@@ -9,6 +9,7 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 app.UseSecurityHeaders();
+app.UseRequestBodyLimit();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
