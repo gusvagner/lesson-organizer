@@ -1,24 +1,109 @@
 @use '@angular/material' as mat;
+@use './styles/theme-colors' as theme-colors;
+@use './styles/tokens';
 
 html {
   height: 100%;
   color-scheme: light dark;
+
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: theme-colors.$primary-palette,
+        tertiary: theme-colors.$tertiary-palette,
       ),
-      typography: Roboto,
+      typography: (
+        plain-family: 'Inter Variable',
+        brand-family: 'Inter Variable',
+      ),
       density: 0,
+    )
+  );
+
+  @include mat.theme-overrides(
+    (
+      primary: var(--lo-primary),
+      surface: var(--lo-surface),
+      surface-container: var(--lo-surface),
+      surface-container-low: var(--lo-surface),
+      on-surface: var(--lo-text),
+      on-surface-variant: var(--lo-text-muted),
+      outline-variant: var(--lo-border),
+      error: var(--lo-error),
+    )
+  );
+
+  @include mat.form-field-overrides(
+    (
+      outlined-container-shape: var(--lo-radius-md),
+    )
+  );
+  @include mat.card-overrides(
+    (
+      elevated-container-shape: var(--lo-radius-lg),
+      outlined-container-shape: var(--lo-radius-lg),
+      filled-container-shape: var(--lo-radius-lg),
+    )
+  );
+  @include mat.dialog-overrides(
+    (
+      container-shape: var(--lo-radius-lg),
+    )
+  );
+  @include mat.button-overrides(
+    (
+      filled-container-shape: var(--lo-radius-full),
+      outlined-container-shape: var(--lo-radius-full),
+      text-container-shape: var(--lo-radius-full),
+      tonal-container-shape: var(--lo-radius-full),
+      protected-container-shape: var(--lo-radius-full),
+    )
+  );
+  @include mat.menu-overrides(
+    (
+      container-shape: var(--lo-radius-md),
+    )
+  );
+  @include mat.snack-bar-overrides(
+    (
+      container-shape: var(--lo-radius-md),
     )
   );
 }
 
 body {
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
   margin: 0;
   height: 100%;
+  background-color: var(--lo-page);
+  color: var(--lo-text);
+  font-family: var(--lo-font);
+  font-size: 16px;
+  line-height: 24px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+a {
+  color: var(--lo-primary);
+}
+
+:focus-visible {
+  outline: 2px solid var(--lo-primary);
+  outline-offset: 2px;
+}
+
+.mat-mdc-select-panel {
+  border-radius: var(--lo-radius-md) !important;
 }

@@ -1,0 +1,28 @@
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+
+@Component({
+  selector: 'lo-app-logo',
+  template: `
+    <svg
+      viewBox="0 0 32 32"
+      role="img"
+      aria-label="Lesson Organizer"
+      [attr.width]="size()"
+      [attr.height]="size()"
+    >
+      <rect width="32" height="32" rx="9" fill="#2b50ba" />
+      <path d="M7.5 11.2c2.8-1.1 5.6-.9 8.5.7v11c-2.9-1.6-5.7-1.8-8.5-.7z" fill="#fff" />
+      <path d="M24.5 11.2c-2.8-1.1-5.6-.9-8.5.7v11c2.9-1.6 5.7-1.8 8.5-.7z" fill="#dce1ff" />
+      <circle cx="24.5" cy="7.5" r="3" fill="#ff7633" />
+    </svg>
+  `,
+  styles: `
+    :host {
+      display: inline-flex;
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class AppLogo {
+  readonly size = input(32);
+}
