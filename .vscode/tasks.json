@@ -25,9 +25,9 @@
         "owner": "typescript",
         "pattern": "$tsc",
         "background": {
-          "activeBegins": true,
-          "beginsPattern": "Changes detected|Building",
-          "endsPattern": "Local:|bundle generation (complete|failed)"
+          "activeOnStart": true,
+          "beginsPattern": { "regexp": "Changes detected" },
+          "endsPattern": { "regexp": "bundle generation (complete|failed)" }
         }
       }
     }
