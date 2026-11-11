@@ -1,0 +1,31 @@
+<div class="board" [class.single]="columns().length === 1" cdkDropListGroup>
+  @for (column of columns(); track column.status) {
+    <section class="column" [attr.data-status]="column.status" [attr.aria-label]="column.label">
+      <header class="column-header">
+        <span class="dot" aria-hidden="true"></span>
+        <h2>{{ column.label }}</h2>
+        <span class="count">{{ column.plans.length }}</span>
+      </header>
+      <div
+        class="cards"
+        cdkDropList
+        [cdkDropListData]="column.status"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (plan of column.plans; track plan.id) {
+          <div class="drag" cdkDrag [cdkDragData]="plan" [cdkDragDisabled]="saving()">
+            <lo-lesson-plan-board-card
+              [plan]="plan"
+              [saving]="saving()"
+              (statusChange)="statusChange.emit($event)"
+              (remove)="remove.emit($event)"
+            />
+            <div class="placeholder" *cdkDragPlaceholder></div>
+          </div>
+        } @empty {
+          <p class="empty">No lesson plans</p>
+        }
+      </div>
+    </section>
+  }
+</div>

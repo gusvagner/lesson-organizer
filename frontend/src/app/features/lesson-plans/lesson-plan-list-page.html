@@ -38,17 +38,11 @@
           (action)="goTo('/lesson-plans/new')"
         />
       }
-    } @else if (viewport.handset()) {
-      <lo-lesson-plan-cards
-        [plans]="store.plans()"
-        [saving]="store.saving()"
-        (statusChange)="changeStatus($event)"
-        (remove)="remove($event)"
-      />
     } @else {
-      <lo-lesson-plan-table
+      <lo-lesson-plan-board
         [plans]="store.plans()"
         [saving]="store.saving()"
+        [statuses]="columns()"
         (statusChange)="changeStatus($event)"
         (remove)="remove($event)"
       />

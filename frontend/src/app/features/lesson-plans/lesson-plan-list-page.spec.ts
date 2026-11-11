@@ -64,6 +64,19 @@ describe('LessonPlanListPage', () => {
     expect(text).toContain('Nov 12, 2026');
   });
 
+  it('board with three columns: To prepare, Ready, Delivered', async () => {
+    const root = await open('/lesson-plans');
+    const headings = Array.from(root.querySelectorAll('section[data-status] h2')).map(textOf);
+    expect(headings).toEqual(['To prepare', 'Ready', 'Delivered']);
+    expect(root.querySelector('table')).toBeNull();
+  });
+
+  it('?status=Ready → only the Ready column', async () => {
+    const root = await open('/lesson-plans?status=Ready');
+    const headings = Array.from(root.querySelectorAll('section[data-status] h2')).map(textOf);
+    expect(headings).toEqual(['Ready']);
+  });
+
   it('?studentId=<guid>&status=Ready → loads with both', async () => {
     await open(`/lesson-plans?studentId=${BRUNO}&status=Ready`);
     expect(pageFakes().plans.filters.at(-1)).toEqual({ studentId: BRUNO, status: 'Ready' });
@@ -106,15 +119,21 @@ describe('LessonPlanListPage', () => {
   it('status change → select disabled while saving, then "Status changed to Ready"', async () => {
     await open('/lesson-plans');
     const gate = pageFakes().plans.responder.hold('changeStatus');
-    const select = harness.fixture.debugElement.query(By.directive(StatusSelect));
-    (select.componentInstance as StatusSelect).statusChange.emit('Ready');
+    const selectOf = (title: string) =>
+      harness.fixture.debugElement
+        .queryAll(By.directive(StatusSelect))
+        .map((debug) => debug.componentInstance as StatusSelect)
+        .find((select) => select.label() === `Status of ${title}`)!;
+    selectOf('Present perfect').statusChange.emit('Ready');
     await harness.fixture.whenStable();
-    expect((select.componentInstance as StatusSelect).disabled()).toBe(true);
+    const ready = harness.routeNativeElement!.querySelector('section[data-status="Ready"]')!;
+    expect(textOf(ready)).toContain('Present perfect');
+    expect(selectOf('Present perfect').disabled()).toBe(true);
     gate.next();
     await settle();
     await harness.fixture.whenStable();
     expect(pageFakes().feedback.messages).toEqual(['Status changed to Ready']);
-    expect((select.componentInstance as StatusSelect).disabled()).toBe(false);
+    expect(selectOf('Present perfect').disabled()).toBe(false);
   });
 
   it('delete confirmed → "Lesson plan deleted" and the row is gone', async () => {

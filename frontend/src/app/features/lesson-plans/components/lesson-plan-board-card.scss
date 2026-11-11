@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lo-space-2);
+  padding: var(--lo-space-4);
+  border: 1px solid var(--lo-border);
+  border-radius: var(--lo-radius-lg);
+  background-color: var(--lo-surface);
+  box-shadow: var(--lo-shadow-card);
+  cursor: grab;
+}
+
+.card-title {
+  color: var(--lo-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--lo-primary);
+  }
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lo-space-1) var(--lo-space-3);
+  color: var(--lo-text-muted);
+  font-size: 13px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.student,
+.date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
+
+.student:hover {
+  color: var(--lo-primary);
+}
+
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--lo-space-1);
+}
