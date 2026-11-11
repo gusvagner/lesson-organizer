@@ -17,7 +17,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler();
+    app.UseClientAwareExceptionHandler();
 }
 
 app.UseSpaStaticFiles();

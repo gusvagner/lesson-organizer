@@ -1,14 +1,11 @@
 using LessonOrganizer.Testing.SqlServer;
 
+using static LessonOrganizer.Api.IntegrationTests.Security.SecurityHeaderAssertions;
+
 namespace LessonOrganizer.Api.IntegrationTests.Security;
 
 public sealed class SecurityHeadersTests(SqlServerFixture sql) : IAsyncLifetime
 {
-    private const string ContentSecurityPolicy =
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
-        "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; " +
-        "frame-ancestors 'none'";
-
     private readonly string _webRoot = Path.Combine(Path.GetTempPath(), $"lo-webroot-{Guid.NewGuid():N}");
     private ApiFactory _factory = null!;
 
@@ -46,15 +43,4 @@ public sealed class SecurityHeadersTests(SqlServerFixture sql) : IAsyncLifetime
         var loggedIn = await ApiClient.LoggedInAsync(_factory, "a@example.com");
         AssertSecurityHeaders(await loggedIn.Http.GetAsync($"/api/students/{Guid.CreateVersion7()}", Ct));
     }
-
-    private static void AssertSecurityHeaders(HttpResponseMessage response)
-    {
-        Assert.Equal("nosniff", HeaderValue(response, "X-Content-Type-Options"));
-        Assert.Equal("DENY", HeaderValue(response, "X-Frame-Options"));
-        Assert.Equal("no-referrer", HeaderValue(response, "Referrer-Policy"));
-        Assert.Equal(ContentSecurityPolicy, HeaderValue(response, "Content-Security-Policy"));
-    }
-
-    private static string? HeaderValue(HttpResponseMessage response, string name) =>
-        response.Headers.TryGetValues(name, out var values) ? string.Join(",", values) : null;
 }

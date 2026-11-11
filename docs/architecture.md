@@ -177,7 +177,7 @@ sequenceDiagram
 | Column types, lengths, enum storage | Infrastructure (EF configurations, migrations) |
 | Password hashing, lockout, security stamp | Infrastructure (Identity) behind `IUserAccounts` |
 | 401, CSRF, rate limit, auth cookie | Api middleware and `AuthController` |
-| Security headers (CSP, nosniff, frame and referrer policy), 1 MiB body limit | `Http/SecurityHeaders.cs`, `Http/RequestBodyLimit.cs`, first in the pipeline (`Program.cs`): headers → body limit → static files → rate limiter → authentication → authorization → controllers → SPA fallback |
+| Security headers (CSP, nosniff, frame and referrer policy), 1 MiB body limit | `Http/SecurityHeaders.cs`, `Http/RequestBodyLimit.cs`, first in the pipeline (`Program.cs`): headers → body limit → exception handler (outside Development; keeps the status of bad requests such as an over-limit chunked body) → static files → rate limiter → authentication → authorization → controllers → SPA fallback |
 
 ## Tests
 

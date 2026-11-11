@@ -1,6 +1,8 @@
 using System.Net;
 using LessonOrganizer.Testing.SqlServer;
 
+using LessonOrganizer.Api.IntegrationTests.Security;
+
 namespace LessonOrganizer.Api.IntegrationTests.Auth;
 
 public sealed class RateLimitTests(SqlServerFixture sql) : IAsyncLifetime
@@ -24,6 +26,8 @@ public sealed class RateLimitTests(SqlServerFixture sql) : IAsyncLifetime
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.LoginAsync("nobody@example.com", "wrong-pass")).StatusCode);
         }
 
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await client.LoginAsync("nobody@example.com", "wrong-pass")).StatusCode);
+        var limited = await client.LoginAsync("nobody@example.com", "wrong-pass");
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        SecurityHeaderAssertions.AssertSecurityHeaders(limited);
     }
 }

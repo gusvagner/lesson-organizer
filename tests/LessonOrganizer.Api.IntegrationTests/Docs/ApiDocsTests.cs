@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using LessonOrganizer.Api.IntegrationTests.Security;
 using LessonOrganizer.Testing.SqlServer;
 
 namespace LessonOrganizer.Api.IntegrationTests.Docs;
@@ -30,6 +31,18 @@ public sealed class ApiDocsTests(SqlServerFixture sql)
         var response = await anonymous.Http.GetAsync("/scalar", Ct);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Scalar_InDevelopment_HasNoCspBlockingItsInlineScript()
+    {
+        await using var factory = new ApiFactory(sql, environment: "Development");
+        var anonymous = await ApiClient.CreateAsync(factory);
+        var scalar = await anonymous.Http.GetAsync("/scalar", Ct);
+        var csrf = await anonymous.Http.GetAsync("/api/auth/csrf", Ct);
+        Assert.Null(SecurityHeaderAssertions.HeaderValue(scalar, "Content-Security-Policy"));
+        Assert.Equal("nosniff", SecurityHeaderAssertions.HeaderValue(scalar, "X-Content-Type-Options"));
+        SecurityHeaderAssertions.AssertSecurityHeaders(csrf);
     }
 
     [Fact]

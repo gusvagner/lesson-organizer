@@ -30,7 +30,7 @@ public sealed class LogSecretsTests(SqlServerFixture sql) : IAsyncLifetime
     {
         var secrets = await RunFullFlowAsync();
         var texts = _logs.Logs.Select(log => log.Text).ToList();
-        Assert.NotEmpty(texts);
+        Assert.Contains(_logs.Logs, log => log.Level == LogLevel.Information);
         foreach (var (name, value) in secrets)
         {
             Assert.False(

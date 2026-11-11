@@ -30,6 +30,7 @@ public sealed class RequestBodyLimitTests(SqlServerFixture sql) : IAsyncLifetime
         var response = await teacher.Http.PostAsync("/api/students", body, Ct);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        SecurityHeaderAssertions.AssertSecurityHeaders(response);
         await using var context = _factory.NewDbContext();
         Assert.Equal(0, await context.Students.CountAsync(Ct));
     }

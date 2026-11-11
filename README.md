@@ -153,3 +153,5 @@ From the security review ([docs/security-review.md](docs/security-review.md)), a
 - The Content-Security-Policy allows inline styles (`style-src 'unsafe-inline'`), which Angular and Angular Material need for component styles; scripts are limited to the app's own files.
 - The login rate limit is per client IP and per app instance.
 - Anyone who knows a teacher's email can trigger that account's lockout (5 wrong passwords, 15 minutes).
+- Register answers 409 for an email that already has an account, so it reveals which emails are registered.
+- Logout removes the session cookie from the browser but does not revoke it on the server; a copied cookie stays valid until it expires (8 h without use).
