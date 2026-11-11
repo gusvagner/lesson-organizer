@@ -111,7 +111,7 @@ flowchart LR
     Infra --> Db[("SQL Server")]
 ```
 
-The business rules live in Domain and Application and depend on nothing else; Infrastructure and Api implement the Application's interfaces. Details: [docs/architecture.md](docs/architecture.md) (backend), [docs/frontend-architecture.md](docs/frontend-architecture.md) (Angular), [DESIGN.md](DESIGN.md) (look and theme).
+The business rules live in Domain and Application and depend on nothing else; Infrastructure and Api implement the Application's interfaces. Details: [docs/architecture.md](docs/architecture.md) (backend), [docs/frontend-architecture.md](docs/frontend-architecture.md) (Angular), [docs/design.md](docs/design.md) (look and theme).
 
 In the Docker demo one `app` container runs the API and serves the built Angular files, next to the `db` container (SQL Server). Login sessions survive restarts because the data protection keys live in a Docker volume.
 

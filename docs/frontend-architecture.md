@@ -153,7 +153,7 @@ Top `mat-toolbar` inside the shell: app name, "Lesson plans", "Students", and a 
 - `lessonDate` stays a `yyyy-MM-dd` string in models. `lesson-date.ts` converts to a local `Date` for the datepicker and display, never through `new Date('yyyy-MM-dd')`, which is parsed as UTC and can show the previous day.
 - Lists: `mat-table` on wide screens, cards at phone width (CDK `BreakpointObserver`, `Handset`). The lesson plans page is a board instead: three columns (stacked under 900 px), cards sorted by date, dropping a card in another column calls the same status change as the select. Status changes are optimistic: the store moves the card at once and moves it back if the PATCH fails.
 - On touch screens a card starts dragging only after a 250 ms press, so swiping scrolls the page.
-- Look and theme: [DESIGN.md](../DESIGN.md). A small inline script in `index.html` applies the stored theme before the app loads, so a stored dark theme never flashes light. Colors come from `--lo-*` variables (`frontend/src/styles/_tokens.scss`, `light-dark()`), never raw values.
+- Look and theme: [design.md](design.md). A small inline script in `index.html` applies the stored theme before the app loads, so a stored dark theme never flashes light. Colors come from `--lo-*` variables (`frontend/src/styles/_tokens.scss`, `light-dark()`), never raw values.
 
 ## Tests
 

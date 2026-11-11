@@ -180,7 +180,7 @@ Verified on 2026-11-10 with `npx ng version` after `npx @angular/cli@22 new` (np
 
 ### UI components
 
-**Angular Material 22** (with Angular CDK 22), added with `ng add @angular/material` at stage 9. Material 3 theme generated from the DESIGN.md primary color (`ng generate @angular/material:theme-color`), light and dark from the system setting plus a toolbar toggle. See [ADR 0002](decisions/0002-angular-material.md) and [DESIGN.md](../DESIGN.md).
+**Angular Material 22** (with Angular CDK 22), added with `ng add @angular/material` at stage 9. Material 3 theme generated from the design.md primary color (`ng generate @angular/material:theme-color`), light and dark from the system setting plus a toolbar toggle. See [ADR 0002](decisions/0002-angular-material.md) and [design.md](design.md).
 
 Fonts and icons are bundled from npm, nothing loads from a CDN: `@fontsource-variable/inter` (Inter Variable) and `material-icons` (Material Icons Round, a 174 KB static font; the variable Material Symbols font was 5.4 MB). Added on 2026-11-10 with the human's approval.
 

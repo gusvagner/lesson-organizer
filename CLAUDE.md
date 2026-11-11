@@ -12,7 +12,7 @@ Read these before any task. Do not contradict them; if something is unclear, ask
 - `docs/architecture.md` — backend: layers, dependency rule, folders per project, where each rule lives, test projects.
 - `docs/frontend-architecture.md` — Angular: folders, kinds of code, routes, data flow, auth, UI states, tests.
 - `docs/stack.md` — backend and frontend versions (.NET 10, Angular 22), build settings, packages, Docker, commands.
-- `DESIGN.md` — the frontend look: color tokens (light and dark), type, shape, components.
+- `docs/design.md` — the frontend look: color tokens (light and dark), type, shape, components.
 - `docs/decisions/` — ADRs.
 
 The original exercise PDF in `docs/` is local only (git-ignored). Never commit or quote it in the repo.
@@ -29,7 +29,6 @@ Items marked *(planned)* do not exist yet; create them in the stage listed in `d
 lesson-organizer/
 ├── CLAUDE.md                     # this file: context and rules for AI agents
 ├── README.md                     # pitch, setup, run, tests, demo credentials
-├── DESIGN.md                     # design system: colors, type, shape, components (frontend look)
 ├── .gitignore
 ├── .editorconfig                 # code style checked by dotnet build
 ├── global.json                   # pins .NET SDK 10.0.403
@@ -50,6 +49,7 @@ lesson-organizer/
 │   ├── plan.md                   # approved implementation plan
 │   ├── architecture.md           # backend layers, dependency rule, diagrams
 │   ├── frontend-architecture.md  # Angular structure, routes, state, tests
+│   ├── design.md                 # design system: colors, type, shape, components (frontend look)
 │   ├── stack.md                  # versions, build settings, packages, commands
 │   ├── api.md                    # (planned) endpoints, status codes, auth
 │   ├── decisions/                # ADRs: NNNN-short-title.md
