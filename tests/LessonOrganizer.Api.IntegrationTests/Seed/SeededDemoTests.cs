@@ -20,10 +20,12 @@ public sealed class SeededDemoTests(SqlServerFixture sql) : IAsyncLifetime
     public ValueTask DisposeAsync() => _factory.DisposeAsync();
 
     [Fact]
-    public async Task Maria_SeesOnlyHerThreeStudents()
+    public async Task Maria_SeesOnlyHerFiveStudents()
     {
         var maria = await LoggedInAsync("maria@example.com");
-        Assert.Equal(["Ana", "Bruno", "Carla"], await NamesAsync(maria, "/api/students", "name"));
+        Assert.Equal(
+            ["Ana Souza", "Bruno Lima", "Carla Mendes", "Diego Alves", "Fernanda Rocha"],
+            await NamesAsync(maria, "/api/students", "name"));
     }
 
     [Fact]
@@ -39,7 +41,7 @@ public sealed class SeededDemoTests(SqlServerFixture sql) : IAsyncLifetime
     {
         var maria = await LoggedInAsync("maria@example.com");
         var students = await maria.Http.GetFromJsonAsync<List<JsonElement>>("/api/students", Ct);
-        var ana = students!.Single(student => student.GetProperty("name").GetString() == "Ana").GetProperty("id").GetGuid();
+        var ana = students!.Single(student => student.GetProperty("name").GetString() == "Ana Souza").GetProperty("id").GetGuid();
         Assert.Equal(HttpStatusCode.Conflict, (await maria.Http.DeleteAsync($"/api/students/{ana}", Ct)).StatusCode);
     }
 

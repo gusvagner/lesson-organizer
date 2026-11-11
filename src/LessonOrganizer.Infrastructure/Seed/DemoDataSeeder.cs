@@ -16,29 +16,6 @@ public sealed class DemoDataSeeder(
 {
     public const string DemoPassword = "Demo1234!";
 
-    private static readonly SeedTeacher[] Teachers =
-    [
-        new("Maria Silva", "maria@example.com",
-        [
-            new("Ana", EnglishLevel.Intermediate,
-            [
-                new("Present perfect — conversation", LessonPlanStatus.Delivered, -7),
-                new("Phrasal verbs at work", LessonPlanStatus.Ready, 2),
-            ]),
-            new("Bruno", EnglishLevel.Beginner, [new("Greetings and introductions", LessonPlanStatus.ToPrepare, 5)]),
-            new("Carla", EnglishLevel.Advanced, []),
-        ]),
-        new("John Smith", "john@example.com",
-        [
-            new("David", EnglishLevel.Elementary,
-            [
-                new("Past simple stories", LessonPlanStatus.Delivered, -3),
-                new("Ordering at a restaurant", LessonPlanStatus.ToPrepare, 4),
-            ]),
-            new("Emma", EnglishLevel.UpperIntermediate, [new("Job interview practice", LessonPlanStatus.Ready, 1)]),
-        ]),
-    ];
-
     public async Task<bool> SeedAsync(CancellationToken ct)
     {
         if (await db.Users.AnyAsync(ct))
@@ -47,7 +24,7 @@ public sealed class DemoDataSeeder(
         }
 
         var today = DateOnly.FromDateTime(time.GetLocalNow().DateTime);
-        foreach (var teacher in Teachers)
+        foreach (var teacher in DemoData.Teachers)
         {
             await SeedTeacherAsync(teacher, today, ct);
         }
@@ -61,7 +38,8 @@ public sealed class DemoDataSeeder(
         foreach (var seedStudent in teacher.Students)
         {
             var student = Created(
-                Student.Create(user.Id, seedStudent.Name, null, seedStudent.Level, null), seedStudent.Name);
+                Student.Create(user.Id, seedStudent.Name, seedStudent.Email, seedStudent.Level, seedStudent.Notes),
+                seedStudent.Name);
             await students.AddAsync(student, ct);
             await SeedPlansAsync(student.Id, seedStudent.Plans, today, ct);
         }
@@ -72,7 +50,8 @@ public sealed class DemoDataSeeder(
         foreach (var seedPlan in plans)
         {
             var plan = Created(
-                LessonPlan.Create(studentId, seedPlan.Title, null, today.AddDays(seedPlan.DayOffset)), seedPlan.Title);
+                LessonPlan.Create(studentId, seedPlan.Title, seedPlan.Description, today.AddDays(seedPlan.DayOffset)),
+                seedPlan.Title);
             plan.ChangeStatus(seedPlan.Status);
             await lessonPlans.AddAsync(plan, ct);
         }
@@ -83,10 +62,4 @@ public sealed class DemoDataSeeder(
             ? result.Value
             : throw new InvalidOperationException(
                 $"Demo data item '{item}' could not be created: {string.Join(" ", result.Errors.Select(error => error.Message))} Expected valid seed data.");
-
-    private sealed record SeedPlan(string Title, LessonPlanStatus Status, int DayOffset);
-
-    private sealed record SeedStudent(string Name, EnglishLevel Level, SeedPlan[] Plans);
-
-    private sealed record SeedTeacher(string Name, string Email, SeedStudent[] Students);
 }

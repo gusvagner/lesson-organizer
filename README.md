@@ -53,10 +53,10 @@ Seeded at startup when `Seed:DemoData` is `true` (on in Development and in the D
 
 | Teacher | Email | Password | Students | Lesson plans |
 |---|---|---|---|---|
-| Maria Silva | `maria@example.com` | `Demo1234!` | Ana (Intermediate), Bruno (Beginner), Carla (Advanced) | Ana: "Present perfect — conversation" (Delivered, 7 days ago), "Phrasal verbs at work" (Ready, in 2 days). Bruno: "Greetings and introductions" (To prepare, in 5 days). Carla: none. |
+| Maria Silva | `maria@example.com` | `Demo1234!` | Ana Souza (Intermediate), Bruno Lima (Beginner), Carla Mendes (Advanced), Diego Alves (Upper intermediate), Fernanda Rocha (Elementary) — each with email and notes | 8 plans, each with a lesson outline. Ana: "Present perfect — conversation" (Delivered, 7 days ago), "Phrasal verbs at work" (Ready, in 2 days). Bruno: "Numbers, prices and paying the bill" (Delivered), "Greetings and introductions" (To prepare). Diego: "Conditionals in business emails" (Delivered), "Negotiation phrases for meetings" (Ready). Fernanda: "Daily routine and present simple", "At the airport" (To prepare). Carla: none. |
 | John Smith | `john@example.com` | `Demo1234!` | David (Elementary), Emma (Upper intermediate) | David: "Past simple stories" (Delivered, 3 days ago), "Ordering at a restaurant" (To prepare, in 4 days). Emma: "Job interview practice" (Ready, tomorrow). |
 
-Try: drag a card to another column; deleting Ana is refused because she has lesson plans; Carla can be deleted; John sees none of Maria's data.
+Try: drag a card to another column; deleting Ana Souza is refused because she has lesson plans; Carla Mendes can be deleted; John sees none of Maria's data.
 
 ## Tests
 

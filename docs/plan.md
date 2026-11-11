@@ -94,10 +94,10 @@ The exercise asks for "seeded data/credentials for demo purposes".
 
 | User (teacher) | Password | Students | Lesson plans |
 |---|---|---|---|
-| Maria Silva — `maria@example.com` | `Demo1234!` | Ana (Intermediate), Bruno (Beginner), Carla (Advanced, no plans) | Ana: "Present perfect — conversation" (Delivered, −7 days), "Phrasal verbs at work" (Ready, +2 days); Bruno: "Greetings and introductions" (ToPrepare, +5 days) |
+| Maria Silva — `maria@example.com` | `Demo1234!` | Ana Souza (Intermediate), Bruno Lima (Beginner), Carla Mendes (Advanced, no plans), Diego Alves (UpperIntermediate), Fernanda Rocha (Elementary); each with an email and notes (job, goal, class schedule) | Every plan has a description (lesson outline). Ana: "Present perfect — conversation" (Delivered, −7 days), "Phrasal verbs at work" (Ready, +2 days); Bruno: "Numbers, prices and paying the bill" (Delivered, −4 days), "Greetings and introductions" (ToPrepare, +5 days); Diego: "Conditionals in business emails" (Delivered, −10 days), "Negotiation phrases for meetings" (Ready, +3 days); Fernanda: "Daily routine and present simple" (ToPrepare, +7 days), "At the airport" (ToPrepare, +12 days) |
 | John Smith — `john@example.com` | `Demo1234!` | David (Elementary), Emma (UpperIntermediate) | David: "Past simple stories" (Delivered, −3 days), "Ordering at a restaurant" (ToPrepare, +4 days); Emma: "Job interview practice" (Ready, +1 day) |
 
-The data supports the demo workflows: Ana has plans in two statuses (workflows 1 and 2), deleting Ana is blocked (workflow 3), Carla can be deleted, and logging in as John shows none of Maria's data (isolation).
+The data supports the demo workflows and looks like a real teacher's week (8 plans across all three columns of the board): Ana has plans in two statuses (workflows 1 and 2), deleting Ana is blocked (workflow 3), Carla can be deleted, and logging in as John shows none of Maria's data (isolation).
 
 ## 4. Architecture
 
