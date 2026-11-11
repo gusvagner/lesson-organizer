@@ -71,4 +71,4 @@ Dark mode drops shadows to borders only.
 
 ## Icons and imagery
 
-Material Symbols Rounded, bundled from npm (`material-symbols`), 20–24 px, weight 400. The logo mark is an original SVG: a rounded square in `primary` with an open book drawn in white and a small `accent` dot; the same SVG is the favicon. No photos or illustrations.
+Material Icons Round, bundled from npm (`material-icons`, static font, 174 KB woff2), 16–24 px. Material Symbols was tried first and dropped: its variable font is 5.4 MB. The logo mark is an original SVG: a rounded square in `primary` with an open book drawn in white and a small `accent` dot; the same SVG is the favicon. No photos or illustrations.

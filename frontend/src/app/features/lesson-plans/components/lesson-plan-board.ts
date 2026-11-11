@@ -33,6 +33,8 @@ export class LessonPlanBoard {
   readonly statusChange = output<StatusChange>();
   readonly remove = output<LessonPlanResponse>();
 
+  protected readonly dragStartDelay = { touch: 250, mouse: 0 };
+
   protected readonly columns = computed<BoardColumn[]>(() =>
     this.statuses().map((status) => ({
       status,

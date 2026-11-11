@@ -1,3 +1,4 @@
+import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -9,6 +10,7 @@ import { aStudent } from '../students/testing/fake-students-api';
 import { LessonPlanFilters } from './components/lesson-plan-filters';
 import { StatusSelect } from './components/status-select';
 import { LessonPlanListPage } from './lesson-plan-list-page';
+import { LessonPlanResponse, LessonPlanStatus } from './lesson-plan.model';
 import { aLessonPlan } from './testing/fake-lesson-plans-api';
 
 const ANA = '01a1c6e4-b0ef-7355-873b-c8c3fed7c18d';
@@ -134,6 +136,32 @@ describe('LessonPlanListPage', () => {
     await harness.fixture.whenStable();
     expect(pageFakes().feedback.messages).toEqual(['Status changed to Ready']);
     expect(selectOf('Present perfect').disabled()).toBe(false);
+  });
+
+  it('drop on Ready, save fails → card moves, then returns to To prepare with the error message', async () => {
+    const root = await open('/lesson-plans');
+    const gate = pageFakes().plans.responder.hold('changeStatus');
+    pageFakes().plans.responder.fail('changeStatus', 500);
+    const lists = harness.fixture.debugElement
+      .queryAll(By.directive(CdkDropList))
+      .map((debug) => debug.injector.get(CdkDropList) as CdkDropList<LessonPlanStatus>);
+    const source = lists.find((list) => list.data === 'ToPrepare')!;
+    const target = lists.find((list) => list.data === 'Ready')!;
+    const plan = pageFakes().plans.plans.find((candidate) => candidate.id === 'p1')!;
+    target.dropped.emit({
+      container: target,
+      previousContainer: source,
+      item: { data: plan },
+    } as unknown as CdkDragDrop<LessonPlanStatus, LessonPlanStatus, LessonPlanResponse>);
+    await harness.fixture.whenStable();
+    const column = (status: string) => root.querySelector(`section[data-status="${status}"]`)!;
+    expect(textOf(column('Ready'))).toContain('Present perfect');
+    gate.next();
+    await settle();
+    await harness.fixture.whenStable();
+    expect(textOf(column('ToPrepare'))).toContain('Present perfect');
+    expect(textOf(column('Ready'))).not.toContain('Present perfect');
+    expect(pageFakes().feedback.messages).toEqual(['Something went wrong. Try again.']);
   });
 
   it('delete confirmed → "Lesson plan deleted" and the row is gone', async () => {

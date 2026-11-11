@@ -23,7 +23,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([xsrfRetryInterceptor, unauthorizedInterceptor]),
     ),
     provideLessonDateAdapter(),
-    { provide: MAT_ICON_DEFAULT_OPTIONS, useValue: { fontSet: 'material-symbols-rounded' } },
+    { provide: MAT_ICON_DEFAULT_OPTIONS, useValue: { fontSet: 'material-icons-round' } },
     provideAppInitializer(() => inject(Theme).apply()),
     provideAppInitializer(() => inject(AuthStore).restoreSession()),
   ],

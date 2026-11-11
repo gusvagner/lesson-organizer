@@ -88,6 +88,16 @@ describe('LessonPlanBoard', () => {
     expect(drags.every((drag) => drag.disabled)).toBe(true);
   });
 
+  it('touch → drag starts only after a 250 ms press, so swiping scrolls the page', async () => {
+    const { fixture } = await render();
+    const drags = fixture.debugElement
+      .queryAll(By.directive(CdkDrag))
+      .map((debug) => debug.injector.get(CdkDrag));
+    expect(
+      drags.every((drag) => JSON.stringify(drag.dragStartDelay) === '{"touch":250,"mouse":0}'),
+    ).toBe(true);
+  });
+
   it('statuses ["Ready"] → one column', async () => {
     const { root } = await render(['Ready']);
     expect(root.querySelectorAll('section[data-status]').length).toBe(1);

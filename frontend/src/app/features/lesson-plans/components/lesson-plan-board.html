@@ -13,7 +13,13 @@
         (cdkDropListDropped)="drop($event)"
       >
         @for (plan of column.plans; track plan.id) {
-          <div class="drag" cdkDrag [cdkDragData]="plan" [cdkDragDisabled]="saving()">
+          <div
+            class="drag"
+            cdkDrag
+            [cdkDragData]="plan"
+            [cdkDragDisabled]="saving()"
+            [cdkDragStartDelay]="dragStartDelay"
+          >
             <lo-lesson-plan-board-card
               [plan]="plan"
               [saving]="saving()"
