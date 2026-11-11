@@ -1,3 +1,4 @@
+using LessonOrganizer.Api.Http;
 using LessonOrganizer.Api.Startup;
 using Scalar.AspNetCore;
 
@@ -7,6 +8,7 @@ builder.Services.AddApi(builder.Configuration);
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+app.UseSecurityHeaders();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
