@@ -1,37 +1,105 @@
 :host {
   display: block;
+  min-height: 100%;
 }
 
 .toolbar {
-  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--lo-surface);
+  border-bottom: 1px solid var(--lo-border);
+}
+
+.toolbar-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--lo-space-2);
+  max-width: var(--lo-content-width);
+  margin: 0 auto;
+  padding: var(--lo-space-2) var(--lo-space-6);
+  min-height: 48px;
 }
 
 .brand {
-  color: inherit;
-  font: var(--mat-sys-title-large);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lo-space-2);
+  margin-right: var(--lo-space-4);
+  color: var(--lo-text);
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   text-decoration: none;
-  margin-right: 16px;
 }
 
 .links {
   display: flex;
-  gap: 4px;
+  gap: var(--lo-space-1);
 }
 
-.links .active {
-  background-color: var(--mat-sys-secondary-container);
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--lo-radius-full);
+  color: var(--lo-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+
+  &:hover {
+    background-color: var(--lo-surface-sunken);
+    color: var(--lo-text);
+  }
+
+  &.active {
+    background-color: var(--lo-primary-soft);
+    color: var(--lo-primary);
+  }
 }
 
 .spacer {
   flex: 1;
 }
 
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background-color: var(--lo-primary-soft);
+  color: var(--lo-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .progress {
-  height: 4px;
+  height: 3px;
 }
 
 .content {
-  max-width: 1100px;
+  max-width: var(--lo-content-width);
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--lo-space-6);
+}
+
+@media (max-width: 599px) {
+  .toolbar-inner,
+  .content {
+    padding-left: var(--lo-space-4);
+    padding-right: var(--lo-space-4);
+  }
 }

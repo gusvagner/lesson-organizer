@@ -1,37 +1,60 @@
-<mat-toolbar class="toolbar">
-  @if (viewport.handset()) {
-    <button mat-icon-button [matMenuTriggerFor]="navMenu" aria-label="Open navigation">
-      <mat-icon>menu</mat-icon>
+<header class="toolbar">
+  <div class="toolbar-inner">
+    @if (viewport.handset()) {
+      <button mat-icon-button [matMenuTriggerFor]="navMenu" aria-label="Open navigation">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <mat-menu #navMenu="matMenu">
+        <a mat-menu-item routerLink="/lesson-plans">Lesson plans</a>
+        <a mat-menu-item routerLink="/students">Students</a>
+      </mat-menu>
+    }
+    <a class="brand" routerLink="/lesson-plans">
+      <lo-app-logo [size]="32" />
+      <span>Lesson Organizer</span>
+    </a>
+    @if (!viewport.handset()) {
+      <nav class="links" aria-label="Main">
+        <a class="pill" routerLink="/lesson-plans" routerLinkActive="active">
+          <mat-icon>view_kanban</mat-icon>
+          Lesson plans
+        </a>
+        <a class="pill" routerLink="/students" routerLinkActive="active">
+          <mat-icon>group</mat-icon>
+          Students
+        </a>
+      </nav>
+    }
+    <span class="spacer"></span>
+    <button
+      mat-icon-button
+      class="theme-toggle"
+      type="button"
+      [attr.aria-label]="theme.mode() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+      (click)="theme.toggle()"
+    >
+      <mat-icon>{{ theme.mode() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
     </button>
-    <mat-menu #navMenu="matMenu">
-      <a mat-menu-item routerLink="/lesson-plans">Lesson plans</a>
-      <a mat-menu-item routerLink="/students">Students</a>
+    <button mat-button class="user-menu" [matMenuTriggerFor]="userMenu">
+      <span class="avatar" aria-hidden="true">{{ initial() }}</span>
+      @if (!viewport.handset()) {
+        <span>{{ auth.currentUser()?.name }}</span>
+      }
+      <mat-icon iconPositionEnd>expand_more</mat-icon>
+    </button>
+    <mat-menu #userMenu="matMenu" xPosition="before">
+      <button mat-menu-item class="logout" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Log out</span>
+      </button>
     </mat-menu>
-  }
-  <a class="brand" routerLink="/lesson-plans">Lesson Organizer</a>
-  @if (!viewport.handset()) {
-    <nav class="links">
-      <a mat-button routerLink="/lesson-plans" routerLinkActive="active">Lesson plans</a>
-      <a mat-button routerLink="/students" routerLinkActive="active">Students</a>
-    </nav>
-  }
-  <span class="spacer"></span>
-  <button mat-button class="user-menu" [matMenuTriggerFor]="userMenu">
-    <mat-icon>account_circle</mat-icon>
-    {{ auth.currentUser()?.name }}
-  </button>
-  <mat-menu #userMenu="matMenu">
-    <button mat-menu-item class="logout" (click)="logout()">
-      <mat-icon>logout</mat-icon>
-      <span>Log out</span>
-    </button>
-  </mat-menu>
-</mat-toolbar>
-<div class="progress">
-  @if (loading()) {
-    <mat-progress-bar mode="indeterminate" />
-  }
-</div>
+  </div>
+  <div class="progress">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+</header>
 <main class="content">
   <router-outlet />
 </main>

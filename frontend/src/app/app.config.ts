@@ -9,6 +9,7 @@ import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { AuthStore } from './core/auth/auth-store';
+import { Theme } from './core/layout/theme';
 import { unauthorizedInterceptor } from './core/http/unauthorized-interceptor';
 import { xsrfRetryInterceptor } from './core/http/xsrf-retry-interceptor';
 import { provideLessonDateAdapter } from './shared/dates/lesson-date-adapter';
@@ -23,6 +24,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideLessonDateAdapter(),
     { provide: MAT_ICON_DEFAULT_OPTIONS, useValue: { fontSet: 'material-symbols-rounded' } },
+    provideAppInitializer(() => inject(Theme).apply()),
     provideAppInitializer(() => inject(AuthStore).restoreSession()),
   ],
 };
