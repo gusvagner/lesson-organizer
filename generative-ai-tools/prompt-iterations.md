@@ -43,8 +43,16 @@ Stack and exact versions (and "do not query package registries"), projects, data
 - **Change:** a "Requirements" section: REST rules (plural resource, no verbs in URLs, standard method meanings, status codes, `Location` on create, idempotent PUT), full CRUD spelled out, the four task fields, and ownership by user.
 - **Decision:** the exercise writes `due_date`; the API uses `dueDate` so every JSON field is camelCase.
 
+## v5 — an independent review agent in every part (after part 1)
+
+- **Raised by me:** before part 2, "use an agent to validate — put in the prompt that an agent is needed to validate what was done".
+- **Why it mattered:** part 1 was checked only by the generating agent and by me. In my day-to-day work a separate agent reviews what an agent built, because the author repeats its own blind spots.
+- **Change:** after each part is green, the generating agent dispatches a fresh reviewer subagent with the prompt and the part's files. The reviewer re-runs build and tests, checks the red run, and reports findings graded Critical / Important / Minor; it edits nothing. The report goes into `generation-log.md` as it came, and the generating agent decides each finding — fixed (test first), declined (with the reason) or deferred — instead of accepting it blindly. If it cannot dispatch a subagent, it must say so and stop.
+- **Applied first to part 1**, which had not had an agent review, then to part 2 onward. Part 1 ran with v4; the text of v4 is v5 without the "Independent review in every part" section.
+
 ## Process decisions
 
 - I commit each part's raw output myself on the branch `feat/genai-exercise`; the AI assistant does not commit.
 - Before the run, the folder was isolated from the Lesson Organizer with its own `global.json` (SDK 10.0.403, Microsoft Testing Platform), `nuget.config` (nuget.org only), `Directory.Build.props` (net10.0, nullable, implicit usings, warnings as errors) and an empty `Directory.Packages.props` (central versions on). Without them the generated projects would inherit the main project's analyzers and package versions, and a failure caused by that would look like the AI's mistake. The folder is also excluded from the Lesson Organizer's Docker build context.
 - The prompt runs in a fresh Claude Code agent told to work only inside this folder; it sees the prompt, not the Lesson Organizer's code or this conversation.
+- **Environment fix after part 1:** my isolation missed an `.editorconfig`, so `dotnet format` applied the parent repository's style rules (it asked for an `Async` suffix on 5 test methods). Added `generative-ai-tools/.editorconfig` with `root = true`; `dotnet format --verify-no-changes` now passes. Found by the generating agent in part 1 and confirmed in my validation; not an AI mistake.

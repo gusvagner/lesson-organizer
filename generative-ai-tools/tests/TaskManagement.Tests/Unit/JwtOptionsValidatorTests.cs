@@ -42,6 +42,16 @@ public sealed class JwtOptionsValidatorTests
         Assert.Contains(result.Failures!, failure => failure.Contains("Jwt:SigningKey"));
     }
 
+    [Fact]
+    public void Validate_SigningKeyOf32Spaces_Fails()
+    {
+        var result = _validator.Validate(null, ValidOptions(signingKey: new string(' ', 32)));
+
+        Assert.True(result.Failed);
+        var failure = Assert.Single(result.Failures!);
+        Assert.Contains("Jwt:SigningKey", failure);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -52,6 +62,7 @@ public sealed class JwtOptionsValidatorTests
 
         var result = _validator.Validate(null, options);
 
+        Assert.True(result.Failed);
         var failure = Assert.Single(result.Failures!);
         Assert.Contains("Jwt:Issuer", failure);
     }
@@ -66,6 +77,7 @@ public sealed class JwtOptionsValidatorTests
 
         var result = _validator.Validate(null, options);
 
+        Assert.True(result.Failed);
         var failure = Assert.Single(result.Failures!);
         Assert.Contains("Jwt:Audience", failure);
     }

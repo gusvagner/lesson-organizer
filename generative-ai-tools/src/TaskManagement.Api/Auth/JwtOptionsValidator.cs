@@ -12,7 +12,7 @@ public sealed class JwtOptionsValidator : IValidateOptions<JwtOptions>
         var failures = new List<string>();
         AddFailureIfBlank(failures, nameof(JwtOptions.Issuer), options.Issuer);
         AddFailureIfBlank(failures, nameof(JwtOptions.Audience), options.Audience);
-        AddFailureIfSigningKeyTooShort(failures, options.SigningKey);
+        AddFailureIfSigningKeyWeak(failures, options.SigningKey);
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
@@ -25,13 +25,19 @@ public sealed class JwtOptionsValidator : IValidateOptions<JwtOptions>
         }
     }
 
-    private static void AddFailureIfSigningKeyTooShort(List<string> failures, string signingKey)
+    private static void AddFailureIfSigningKeyWeak(List<string> failures, string signingKey)
     {
+        var setting = $"{JwtOptions.SectionName}:{nameof(JwtOptions.SigningKey)}";
         var keyBytes = Encoding.UTF8.GetByteCount(signingKey);
         if (keyBytes < MinimumSigningKeyBytes)
         {
-            failures.Add(
-                $"{JwtOptions.SectionName}:{nameof(JwtOptions.SigningKey)} must be at least {MinimumSigningKeyBytes} bytes in UTF-8; got {keyBytes} bytes.");
+            failures.Add($"{setting} must be at least {MinimumSigningKeyBytes} bytes in UTF-8; got {keyBytes} bytes.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(signingKey))
+        {
+            failures.Add($"{setting} must not be only whitespace; got {keyBytes} bytes of whitespace.");
         }
     }
 }

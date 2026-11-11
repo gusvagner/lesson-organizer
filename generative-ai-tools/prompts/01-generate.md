@@ -1,4 +1,4 @@
-# Prompt 01 — generate the task API (v4, the version that ran)
+# Prompt 01 — generate the task API (v5: v4 ran part 1; v5 adds the review agent from part 2 on)
 
 You are a senior .NET engineer. Build a small, production-quality RESTful API for task management in the folder `generative-ai-tools/` of this repository. Work only inside that folder.
 
@@ -13,6 +13,15 @@ The work is split into **parts**. Do one part at a time, then **stop and wait** 
 5. Refactor with the tests green.
 
 A test that passes before its code exists is a finding: say so in the log instead of hiding it.
+
+**Independent review in every part** — after the part is green and before you stop:
+
+1. Dispatch a fresh reviewer agent (a subagent with no memory of your work). Give it this prompt, the number of the part, and the paths of the part's files and of `generation-log.md`. Tell it to read the code against the prompt, re-run `dotnet build` and `dotnet test` itself, check that the red run in the log is real and failed for the right reason, and report findings graded Critical / Important / Minor, each with file, line and a concrete failure scenario. The reviewer must not edit any file.
+2. Paste the reviewer's report in `generation-log.md` as it came.
+3. Decide each finding and write the decision next to it: **fixed** (write a failing test first, then the fix, and paste both runs), **declined** (why the code stands), or **deferred** (for a later part, and which one). Do not accept a finding just because the reviewer said it; reviewers can be wrong.
+4. Re-run `dotnet build` and `dotnet test` after the fixes, paste the output, then stop.
+
+If you cannot dispatch a subagent, say so in the log and in your report, and stop: the human will run the review.
 
 ## Goal
 
@@ -102,7 +111,7 @@ Rules per kind of code:
 
 ## Parts
 
-Each part ends with: `dotnet build` (no warnings) and `dotnet test`, both from `generative-ai-tools/`, and an entry in `generation-log.md` with what was built, the failing run (red) and the passing run (green) with the exact commands and their real output (test counts, failures), and anything you are unsure about. Then stop.
+Each part ends with: `dotnet build` (no warnings) and `dotnet test`, both from `generative-ai-tools/`, and an entry in `generation-log.md` with what was built, the failing run (red) and the passing run (green) with the exact commands and their real output (test counts, failures), the reviewer's report with your decision on each finding, and anything you are unsure about. Then stop.
 
 1. **Skeleton.** Solution, both projects, folder layout, `Program.cs` composition, options classes. One smoke test that the app starts. *Done when:* build and test green.
 2. **Tasks core.** `TaskItem`, `TaskItemStatus`, contracts, `TaskValidator`, `ITaskRepository`, `TaskService`, and their unit tests with named fakes: validation (missing/long title, long description, blank description → null), default status, trimming, `UpdatedAt` changes on update, not found for another user's task. *Done when:* unit tests green.
