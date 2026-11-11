@@ -23,6 +23,8 @@ The one-command Docker demo is written in stage 12. In development:
 3. `dotnet run --project src/LessonOrganizer.Api --launch-profile https` — applies migrations and seeds the demo data.
 4. `cd frontend && npm ci && npm start`, then open `http://localhost:4200`. The dev server proxies `/api` to `https://localhost:7141`, so the app and the API share one origin.
 
+In VS Code, steps 3 and 4 are one launch: Run and Debug → **API + Frontend** (F5). It starts the `db` container, builds and runs the API with the `https` profile, starts `ng serve` and opens Chrome at `http://localhost:4200`. Needs the C# extension.
+
 ## Demo credentials
 
 Seeded at startup when `Seed:DemoData` is `true` (on in Development and in the Docker demo) and the database has no users. Dates are relative to the day the seed runs.
