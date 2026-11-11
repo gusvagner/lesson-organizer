@@ -66,14 +66,14 @@ Written test-first (red, then green) for every stage; the log of each run is in 
 |---|---|---|
 | `LessonOrganizer.Domain.Tests` | Entities and invariants (names, emails, lengths, statuses) | 32 |
 | `LessonOrganizer.Application.Tests` | Services with named in-memory fakes: ownership, 404 for other teachers' data, 409 rules, auth | 53 |
-| `LessonOrganizer.Api.Tests` | Controllers and HTTP mapping with named fakes | 34 |
-| `LessonOrganizer.Infrastructure.Tests` | EF Core repositories, schema, foreign keys, unique email, search, seed — real SQL Server (Testcontainers) | 47 |
-| `LessonOrganizer.Api.IntegrationTests` | The whole HTTP pipeline: cookie auth, antiforgery, rate limit, isolation between teachers, SPA hosting, sessions after restart — real SQL Server | 52 |
-| `frontend` (Vitest) | Stores, guards, interceptors, forms, pages, board, theme | 197 |
+| `LessonOrganizer.Api.Tests` | Controllers and HTTP mapping with named fakes | 35 |
+| `LessonOrganizer.Infrastructure.Tests` | EF Core repositories, schema, foreign keys, unique email, search, seed — real SQL Server (Testcontainers) | 49 |
+| `LessonOrganizer.Api.IntegrationTests` | The whole HTTP pipeline: cookie auth, antiforgery, rate limit, isolation between teachers, SPA hosting, sessions after restart — real SQL Server | 65 |
+| `frontend` (Vitest) | Stores, guards, interceptors, forms, pages, board, theme | 202 |
 
 ```bash
-dotnet test                                   # backend, 218 tests; Docker must be running
-cd frontend && npx ng test --watch=false      # frontend, 197 tests
+dotnet test                                   # backend, 234 tests; Docker must be running
+cd frontend && npx ng test --watch=false      # frontend, 202 tests
 ```
 
 ### Coverage
@@ -84,16 +84,16 @@ node tools/coverage-summary.mjs               # merges the latest run's per-proj
 cd frontend && npx ng test --watch=false --coverage   # HTML report in frontend/coverage/
 ```
 
-Measured on 2026-11-10 on the code of this README (218 backend tests; generated EF Core migrations excluded):
+Measured on 2026-11-11 on the code of this README (234 backend and 202 frontend tests; generated EF Core migrations excluded):
 
 | Module | Line coverage |
 |---|---|
 | LessonOrganizer.Domain | 100.0% |
 | LessonOrganizer.Application | 100.0% |
-| LessonOrganizer.Api | 98.4% |
-| LessonOrganizer.Infrastructure | 92.7% |
-| **Backend total** | **97.1%** (849 / 874 lines) |
-| **Frontend** (Angular, Vitest) | **91.7%** lines, 91.9% branches |
+| LessonOrganizer.Api | 98.7% |
+| LessonOrganizer.Infrastructure | 93.9% |
+| **Backend total** | **97.5%** (959 / 984 lines) |
+| **Frontend** (Angular, Vitest) | **91.7%** lines (1027 / 1120), 92.0% branches |
 
 ## Architecture
 

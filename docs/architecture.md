@@ -185,7 +185,7 @@ One test project per layer, all run by `dotnet test`. Tests use named fakes, nev
 
 | Project | Kind | What it covers | Fakes / real parts |
 |---|---|---|---|
-| `Domain.Tests` | unit | invariants of `User`, `Student`, `LessonPlan` | none needed |
+| `Domain.Tests` | unit | invariants of `Student`, `LessonPlan` and the shared text and email rules | none needed |
 | `Application.Tests` | unit | services: ownership, 404/409/400 outcomes, filters, auth rules | `InMemoryStudentRepository`, `InMemoryLessonPlanRepository`, `InMemoryUserAccounts`, `FixedCurrentTeacher` |
 | `Infrastructure.Tests` | unit (data access layer) | migrations, repositories and `IdentityUserAccounts`: persistence across contexts, foreign keys, unique email, lockout, sorting, search with wildcards, seed | real SQL Server from Testcontainers, one container per test run, a new database per test created by the migrations |
 | `Api.Tests` | unit | controllers: each action returns the right result (200/201 + `Location`/204, 400 `ValidationProblemDetails`, 404, 409); `ResultHttpMapping`; `ClaimsCurrentTeacher` reads the id from the claim | controllers built directly with the real services, the in-memory fakes and `FixedCurrentTeacher`; no HTTP, no host, no database |

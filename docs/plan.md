@@ -1,6 +1,6 @@
 # Lesson Organizer — Implementation Plan
 
-Status: **draft, awaiting approval**. No code has been written.
+Status: **approved and implemented** (stages 0–13 and the GenAI answer).
 
 ## 1. Understanding
 
@@ -243,8 +243,8 @@ Detailed, task-by-task plans live in `docs/plans/`, each written just before it 
 3. [Frontend — stages 9–11](plans/2026-11-10-3-frontend.md)
 4. [UI refresh — design system, light/dark theme, lesson plan board](plans/2026-11-10-4-ui-refresh.md) (human request after stage 11)
 5. [Delivery — stage 12](plans/2026-11-10-5-delivery.md) (the GenAI answer moved to plan 7 at the human's request)
-6. Security review — stage 13
-7. GenAI exercise answer (`docs/ai/genai-exercise.md`)
+6. [Security review — stage 13](plans/2026-11-11-6-security-review.md)
+7. GenAI exercise answer ([generative-ai-tools/](../generative-ai-tools/README.md))
 
 | # | Stage | Done when |
 |---|---|---|
@@ -260,7 +260,7 @@ Detailed, task-by-task plans live in `docs/plans/`, each written just before it 
 | 9 | Angular 22 as in [stack.md](stack.md#frontend): confirm Node support, Angular skills installed, scaffold, `ng add @angular/material`, proxy, auth pages, route guard, 401 interceptor, XSRF config | Login/register/logout work against the API |
 | 10 | Angular: students list, search, form, details, delete confirmation | Workflow 3 works |
 | 11 | Angular: lesson plans list, filters, form, status change, delete | Workflows 1 and 2 work |
-| 12 | Docker demo: multi-stage `Dockerfile`, `app` service, `.dockerignore`, `.env.example`, data protection keys volume. Polish: responsiveness, console clean, README as below, `docs/ai/genai-exercise.md` | `docker compose down -v && docker compose up --build` gives the seeded app at `http://localhost:8080`; full test suite run and output recorded; manual check of workflows 1–3 in the Docker demo |
+| 12 | Docker demo: multi-stage `Dockerfile`, `app` service, `.dockerignore`, `.env.example`, data protection keys volume. Polish: responsiveness, console clean, README as below | `docker compose down -v && docker compose up --build` gives the seeded app at `http://localhost:8080`; full test suite run and output recorded; manual check of workflows 1–3 in the Docker demo |
 | 13 | Security review of the whole app against the checklist below; every finding fixed test-first or recorded as an accepted risk | `docs/security-review.md` written; regression tests green; README "Known limitations" updated |
 
 Angular stages 9–11 follow [frontend-architecture.md](frontend-architecture.md) and include its tests (stores, guards, interceptor, helpers, forms, lesson plan list), written first like the backend.
@@ -298,7 +298,7 @@ The exercise asks for "a README with setup instructions and any other documentat
 7. **Architecture:** the layer diagram and a link to [architecture.md](architecture.md) and [frontend-architecture.md](frontend-architecture.md).
 8. **API:** endpoint summary with a link to `plan.md` §5 (and the Scalar UI if adopted).
 9. **Decisions:** links to the ADRs in `docs/decisions/`.
-10. **AI usage:** links to `docs/ai/AI_LOG.md`, `docs/ai/prompts/` and `docs/ai/genai-exercise.md`.
+10. **AI usage:** links to `docs/ai/AI_LOG.md`, `docs/ai/prompts/` and the GenAI answer in `generative-ai-tools/`.
 11. **Known limitations:** from the security review: demo over plain HTTP on localhost, app connects as `sa`, last write wins, rate limiter per instance, lockout can be triggered by others.
 
 A README skeleton with these headings is created at stage 0 and filled in as stages finish; stage 12 checks every command in it by running it.
