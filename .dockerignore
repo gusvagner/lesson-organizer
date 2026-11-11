@@ -16,3 +16,4 @@ tools
 global.json
 coverage.settings.xml
 *.md
+generative-ai-tools
