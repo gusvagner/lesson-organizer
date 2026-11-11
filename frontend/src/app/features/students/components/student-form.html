@@ -1,0 +1,32 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <mat-form-field>
+    <mat-label>Name</mat-label>
+    <input matInput formControlName="name" required />
+    <mat-error>{{ fieldError(form.controls.name, 'Name') }}</mat-error>
+  </mat-form-field>
+  <mat-form-field class="email-field">
+    <mat-label>Email (optional)</mat-label>
+    <input matInput type="email" formControlName="email" />
+    <mat-error>{{ fieldError(form.controls.email, 'Email') }}</mat-error>
+  </mat-form-field>
+  <mat-form-field class="level-field">
+    <mat-label>English level</mat-label>
+    <mat-select formControlName="englishLevel" required>
+      @for (level of levels; track level) {
+        <mat-option [value]="level">{{ level | englishLevelLabel }}</mat-option>
+      }
+    </mat-select>
+    <mat-error>{{ fieldError(form.controls.englishLevel, 'English level') }}</mat-error>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Notes (optional)</mat-label>
+    <textarea matInput formControlName="notes" rows="4"></textarea>
+    <mat-error>{{ fieldError(form.controls.notes, 'Notes') }}</mat-error>
+  </mat-form-field>
+  @for (message of generalErrors(); track message) {
+    <p class="failure" role="alert">{{ message }}</p>
+  }
+  <div class="actions">
+    <button mat-flat-button type="submit" [disabled]="saving()">Save</button>
+  </div>
+</form>

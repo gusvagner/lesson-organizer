@@ -1,0 +1,67 @@
+<a mat-button class="back" routerLink="/students">
+  <mat-icon>arrow_back</mat-icon>
+  Students
+</a>
+
+@if (loaded() && student(); as student) {
+  <header class="page-header">
+    <h1>{{ student.name }}</h1>
+    <div class="page-actions">
+      <a mat-stroked-button [routerLink]="['/students', student.id, 'edit']">
+        <mat-icon>edit</mat-icon>
+        Edit
+      </a>
+      <button mat-stroked-button class="delete-student" type="button" (click)="removeStudent()">
+        <mat-icon>delete</mat-icon>
+        Delete
+      </button>
+    </div>
+  </header>
+
+  <dl class="details">
+    <dt>English level</dt>
+    <dd>{{ student.englishLevel | englishLevelLabel }}</dd>
+    <dt>Email</dt>
+    <dd>{{ student.email ?? '—' }}</dd>
+    <dt>Notes</dt>
+    <dd>{{ student.notes ?? '—' }}</dd>
+  </dl>
+
+  <header class="page-header">
+    <h2>Lesson plans</h2>
+    <a
+      mat-flat-button
+      class="new-lesson-plan"
+      routerLink="/lesson-plans/new"
+      [queryParams]="{ studentId: student.id }"
+    >
+      <mat-icon>add</mat-icon>
+      New lesson plan
+    </a>
+  </header>
+
+  @if (plans().length === 0) {
+    <lo-empty-state
+      icon="event_note"
+      message="No lesson plans yet"
+      actionLabel="New lesson plan"
+      (action)="newLessonPlan()"
+    />
+  } @else if (viewport.handset()) {
+    <lo-lesson-plan-cards
+      [plans]="plans()"
+      [saving]="plansStore.saving()"
+      [showStudent]="false"
+      (statusChange)="changeStatus($event)"
+      (remove)="removePlan($event)"
+    />
+  } @else {
+    <lo-lesson-plan-table
+      [plans]="plans()"
+      [saving]="plansStore.saving()"
+      [showStudent]="false"
+      (statusChange)="changeStatus($event)"
+      (remove)="removePlan($event)"
+    />
+  }
+}

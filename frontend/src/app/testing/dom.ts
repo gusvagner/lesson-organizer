@@ -21,6 +21,24 @@ export function textOf(root: ParentNode): string {
   return (root as HTMLElement).textContent?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
-export function settle(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve));
+export function settle(ms = 0): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function chooseOption(
+  root: HTMLElement,
+  selectSelector: string,
+  optionText: string,
+): Promise<void> {
+  click(root, `${selectSelector} .mat-mdc-select-trigger`);
+  await settle();
+  const options = Array.from(document.querySelectorAll<HTMLElement>('mat-option'));
+  const option = options.find((candidate) => textOf(candidate) === optionText);
+  if (option === undefined) {
+    throw new Error(
+      `No option "${optionText}" in ${selectSelector}; found ${options.map(textOf).join(', ')}.`,
+    );
+  }
+  option.click();
+  await settle();
 }

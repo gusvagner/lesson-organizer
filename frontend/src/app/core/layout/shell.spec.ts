@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthStore } from '../auth/auth-store';
@@ -7,7 +8,9 @@ import { Shell } from './shell';
 
 describe('Shell', () => {
   beforeEach(async () => {
-    TestBed.configureTestingModule({ providers: [provideFakeAuth(), provideRouter([])] });
+    TestBed.configureTestingModule({
+      providers: [provideFakeAuth(), provideRouter([]), provideHttpClient()],
+    });
     await TestBed.inject(AuthStore).login('maria@example.com', 'Demo1234!');
   });
 
