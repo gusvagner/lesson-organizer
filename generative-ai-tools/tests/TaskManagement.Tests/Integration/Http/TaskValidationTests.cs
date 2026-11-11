@@ -74,6 +74,28 @@ public sealed class TaskValidationTests(SqlServerFixture sqlServer)
         Assert.Equal([expectedKey], await ApiJson.ReadValidationErrorKeysAsync(response));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("[]")]
+    public async Task PostTask_BodyThatIsNotATaskObject_Returns400WithWholeBodyErrorKey(string body)
+    {
+        await using var api = await TwoUserApi.StartAsync(sqlServer, Cancellation);
+
+        using var response = await api.UserA.PostAsync("/api/tasks", ApiJson.Body(body), Cancellation);
+
+        Assert.Equal([""], await ApiJson.ReadValidationErrorKeysAsync(response));
+    }
+
+    [Fact]
+    public async Task PostTask_JsonCutOffInsideAField_Returns400KeyedByThatField()
+    {
+        await using var api = await TwoUserApi.StartAsync(sqlServer, Cancellation);
+
+        using var response = await api.UserA.PostAsync("/api/tasks", ApiJson.Body("""{"title":"""), Cancellation);
+
+        Assert.Equal(["title"], await ApiJson.ReadValidationErrorKeysAsync(response));
+    }
+
     [Fact]
     public async Task PutTask_NumericStatus_ErrorMessageDoesNotExposeSerializerDetails()
     {

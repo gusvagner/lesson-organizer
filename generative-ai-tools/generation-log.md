@@ -1347,3 +1347,444 @@ Carried to part 5:
 - the run instructions: user secrets for `Jwt:SigningKey` and `ConnectionStrings:TaskManagement`, and `dotnet ef database update` needing a real connection string (decision 4).
 
 Part 5 has not been started.
+
+## Part 5 — Final check
+
+### Clean build and full run (from `generative-ai-tools/`, at commit b549798 with nothing changed)
+
+Command: `dotnet clean` → `0 Erro(s)`.
+
+Command: `dotnet build`
+
+```
+Compilação com êxito.
+    0 Aviso(s)
+    0 Erro(s)
+```
+
+Command: `dotnet format --verify-no-changes` → exit 0, no output.
+
+Command: `dotnet test`
+
+```
+Resumo da execução de teste: Aprovado!
+  total: 162
+  falhou: 0
+  concluído com êxito: 162
+  ignorados: 0
+  duração: 23s 491ms
+```
+
+### Run instructions (`RUNNING.md`) and `tools/mint-dev-token.sh`
+
+`RUNNING.md` covers the whole local run:
+1. start a development SQL Server with `docker run`;
+2. set the two user secrets (`Jwt:SigningKey`, `ConnectionStrings:TaskManagement`);
+3. `dotnet tool restore` and `dotnet ef database update`;
+4. insert a user with `sqlcmd` inside that container, keeping the id;
+5. mint a token;
+6. `dotnet run`;
+7. curl examples for create, list, get, update and delete, plus one 404 and one 401;
+8. clean up (`docker rm -f`, `dotnet user-secrets clear`).
+
+It also has the HTTPS decision.
+
+**How to get a token, and why:** the API has no login and trusts any HS256 token signed with `Jwt:SigningKey`, so locally you act as the identity provider yourself. `tools/mint-dev-token.sh` (bash and `openssl`, about 20 lines) signs a token with `sub` = the user id, the issuer and audience from `appsettings.json`, and a 60-minute expiry.
+- **The simplest honest option:** no new package and no extra service. The script shows exactly which claims the API needs, and it uses the same key as the API instead of a backdoor in the API.
+- **Rejected:** `dotnet user-jwts` writes its own key and `Authentication:Schemes:Bearer` configuration, which this API does not read. A test-only "dev login" endpoint would be exactly what the prompt rules out.
+- **Not unit-tested:** the script is a development tool. It is checked by the end-to-end run below; an invalid signature would have answered 401 on every call.
+
+**Followed end to end on this machine** (2026-11-11), against a throwaway SQL Server:
+- the container `taskmgmt-sql`, started with the `docker run` from the instructions, on port 14333 (checked free first with `netstat`);
+- user secrets empty before (`No secrets configured for this application.`);
+- the commands from `RUNNING.md` copied verbatim into one bash script (shell state doesn't carry between tool calls);
+- the API run in the background of that same script instead of in a second terminal;
+- `TASK_ID` taken from the create response with `sed` instead of by hand;
+- passwords masked as `***` in the pasted output (the SA password and signing key were random and never printed).
+
+Real output:
+
+```
+===== 1. Start a SQL Server =====
+d09caceb789004d5da40b61727421e6230c2c3305c457a665dc8a0d4ce41b1dd
+SQL Server ready
+
+===== 2. Set the two secrets =====
+Successfully saved Jwt:SigningKey to the secret store.
+Successfully saved ConnectionStrings:TaskManagement to the secret store.
+
+===== 3. Create the database =====
+A ferramenta 'dotnet-ef' (versão '10.0.9') foi restaurada. Comandos disponíveis: dotnet-ef
+A restauração foi bem-sucedida.
+Build started...
+Build succeeded.
+Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+Applying migration '20261111161722_InitialCreate'.
+Done.
+
+===== 4. Add a user =====
+5981E58B-AC08-434D-9070-72777ED400A0
+
+===== 5. Get a token =====
+token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ... (length 311)
+
+===== 6. Run the API (background in this session) =====
+      Now listening on: http://localhost:5180
+      Hosting environment: Development
+
+===== 7. Call it =====
+$ curl -i -X POST "$API" ... (create)
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Date: Wed, 11 Nov 2026 17:03:25 GMT
+Server: Kestrel
+Location: http://localhost:5180/api/tasks/d4174e6f-9d2a-407c-8700-1b48b64778af
+Transfer-Encoding: chunked
+
+{"id":"d4174e6f-9d2a-407c-8700-1b48b64778af","title":"Plan lesson 3","description":"Past simple","status":"Todo","dueDate":"2026-12-01","createdAt":"2026-11-11T17:03:25.3618346+00:00","updatedAt":"2026-11-11T17:03:25.3618346+00:00"}
+
+TASK_ID=d4174e6f-9d2a-407c-8700-1b48b64778af
+
+$ curl -i "$API" (list)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{"items":[{"id":"d4174e6f-9d2a-407c-8700-1b48b64778af","title":"Plan lesson 3","description":"Past simple","status":"Todo","dueDate":"2026-12-01","createdAt":"2026-11-11T17:03:25.3618346+00:00","updatedAt":"2026-11-11T17:03:25.3618346+00:00"}],"page":1,"pageSize":20,"totalCount":1}
+
+$ curl -i "$API/$TASK_ID" (get)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{"id":"d4174e6f-9d2a-407c-8700-1b48b64778af","title":"Plan lesson 3","description":"Past simple","status":"Todo","dueDate":"2026-12-01","createdAt":"2026-11-11T17:03:25.3618346+00:00","updatedAt":"2026-11-11T17:03:25.3618346+00:00"}
+
+$ curl -i -X PUT "$API/$TASK_ID" (replace)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{"id":"d4174e6f-9d2a-407c-8700-1b48b64778af","title":"Plan lesson 3","description":"Past simple vs present perfect","status":"InProgress","dueDate":"2026-12-02","createdAt":"2026-11-11T17:03:25.3618346+00:00","updatedAt":"2026-11-11T17:03:26.0742453+00:00"}
+
+$ curl -i -X DELETE "$API/$TASK_ID" (delete)
+HTTP/1.1 204 No Content
+
+$ curl -i "$API/$TASK_ID" (same id again)
+HTTP/1.1 404 Not Found
+Content-Type: application/problem+json; charset=utf-8
+
+{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Task not found","status":404,"traceId":"00-beb5ece4973e1f81f12ab899e8164c21-ef695f0538eb39a0-00"}
+
+$ curl -i "$API" (no token)
+HTTP/1.1 401 Unauthorized
+Content-Type: application/problem+json; charset=utf-8
+WWW-Authenticate: Bearer
+
+{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.2","title":"Unauthorized","status":401,"traceId":"00-1f2c1b790542e0798899621900880df5-ccd05aa2d23de801-00"}
+
+===== 8. Clean up =====
+taskmgmt-sql
+No secrets configured for this application.
+```
+
+(I trimmed the repeated `Date`, `Server` and `Transfer-Encoding` headers from the 200, 204 and 404 responses here. The first and last responses are shown in full.)
+
+- **Changes to the instructions:** they worked on the first pass, with one correction made before the run. A sentence said the API served HTTP "both locally and in the container", but there is no container image for the API, so I removed "in the container".
+- **Cleanup checked:** `docker ps -a --filter name=taskmgmt-sql` is empty, ports 14333 and 5180 are no longer listening, no `TaskManagement.Api` process remains, and the user secrets are empty again. No other container or database on this machine was touched.
+- **For the human:** step 7 asks the reader to copy the id from the create response; the script did that with `sed`. The 401 response has `WWW-Authenticate: Bearer` with no `error_description`, as the part 4 review fix intended.
+
+### HTTPS: decision
+
+**The API stays HTTP-only, with no `UseHttpsRedirection`, no HSTS and no `https` launch profile, and TLS is a deployment requirement written in `RUNNING.md`.**
+- **TLS belongs at the edge:** an API like this runs behind a reverse proxy, load balancer or platform ingress, which holds the certificate and sends HSTS.
+- **Redirection would break things:** `UseHttpsRedirection` behind a TLS-terminating proxy needs forwarded-headers configuration to work at all, and with an HTTP-only Kestrel it redirects to a port nothing listens on.
+- **A local `https` profile would need setup:** the developer certificate (`dotnet dev-certs https --trust`) changes the machine's certificate store, which is setup beyond "run it locally".
+- **The risk:** a bearer token sent over plain HTTP can be replayed until it expires, so `RUNNING.md` says not to expose the HTTP port directly on a network.
+- **Not added:** no code, no test, no package.
+
+### Self-review against the whole prompt: not done or done differently
+
+Nothing the prompt asks for is missing as far as I can find. These are the places where the result differs from the prompt's letter, or adds something it doesn't mention:
+
+1. **`ITaskRepository.AddAsync(task)` takes no separate owner id** ("every method takes the owner id"). The task already carries `UserId`, set by the service from `ICurrentUser`, and a second parameter could disagree with it. Every read, update and delete takes it. (Part 2, accepted by two reviewers.)
+2. **More files than the tree:**
+   - `Tasks/TaskResult.cs` and `TasksSetup.cs`;
+   - `Auth/ICurrentUser.cs`, `JwtOptionsValidator.cs` and `SubjectValidatingJwtEvents.cs`;
+   - `Users/IUserRepository.cs`;
+   - `Data/EfUserRepository.cs`, `DatabaseOptions.cs`, `PersistenceSetup.cs` and `DesignTimeDbContextFactory.cs`;
+   - an **`Http/` folder** (JSON and binding setup, enum converter and binder);
+   - `tools/mint-dev-token.sh`, `RUNNING.md`, and `dotnet-tools.json` in the folder root (the .NET 10 default).
+
+   Each is one responsibility that the tree has no slot for.
+3. **Enums use a small custom converter (`EnumNameJsonConverter`), not `JsonStringEnumConverter`.** The built-in converter accepted `"Todo, InProgress"` (flag syntax) and stored `InProgress`. Input names are **case-insensitive** (`"done"`, `?status=done`); output always uses the exact name. (Part 4 review.)
+4. **PUT validates before it looks the task up**, so an invalid body on a missing or foreign task gives 400, not 404. That reveals nothing (it depends only on the body) and saves a database round trip.
+5. **A token whose `sub` names no user gets 401.** That is one extra primary-key lookup per request, kept uncached on purpose. The prompt only requires a Guid `sub`; without this, the FK made POST answer 500. (Part 2 I2.)
+6. **One package the prompt doesn't name:** a transitive pin of `System.Security.Cryptography.Pkcs` to 10.0.13, to clear a NuGet audit error (NU1902/NU1903) under warnings-as-errors. (Part 3.)
+7. **Every test, unit tests included, needs Docker**, because the single test project has one assembly-wide SQL Server fixture. The prompt asks for both one test project and one container per run. (Part 3 review, declined.)
+8. **The part 1 smoke test was changed in part 4.** It now expects 401 instead of 404 for an unknown path, because the fallback authorization policy protects every path.
+9. **No optimistic concurrency:** two PUTs on the same task means last write wins. A PUT racing a DELETE gives 404. Deleting a user cascades to their tasks. The prompt asks for none of these.
+10. **The database check on the title only rejects empty and all-space titles.** SQL Server's `LEN` ignores only trailing spaces, so a tab-only title would pass the database, though the validator rejects it. (Part 3 review.)
+11. **HTTP only** (decision above).
+12. **Development behavior has no tests:** the developer exception page and user secrets. The `Testing` environment covers everything outside Development.
+13. **Comments:** there are five `<summary>` blocks, on `SubjectValidatingJwtEvents`, `DesignTimeDbContextFactory`, `ValidationProblemResponse`, `EnumNameJsonConverter` and `EnumNameModelBinder`, where the class name doesn't say why the class exists, plus a usage header in the token script. There are no other comments outside the generated migrations.
+
+Added after the final review (its section 4). The reviewer is right that the list missed these:
+
+14. **A repeated identical PUT moves `updatedAt`.** The stored fields (title, description, status, due date) are idempotent and `createdAt` doesn't change, but `updatedAt` records the last write. The idempotency test compares every field except `updatedAt`, on purpose.
+15. **"Do not commit":** I committed nothing. Parts 1–4 are in git history because **the human** committed each part after validating it (as `PLAN.md` describes). Part 5 is left uncommitted in the working tree.
+16. **Errors about the whole body (an empty body, or JSON that isn't an object, such as `[]`) are keyed `""`**, not by a field name, because no field to name them by exists. That is also the ASP.NET convention. JSON cut off inside a field (`{"title":`) is keyed by that field (`title`). Both are now tested.
+17. **`User.Email` (at most 320, unique) and `User.Name` (required, at most 200)** have limits the prompt doesn't set. 320 is the longest valid e-mail address.
+18. **Stricter token checks than the prompt asks for:** only HS256, a 30 s clock skew instead of 5 min, an expiry required, and a `sub` that must name an existing user. A client whose clock is more than 30 s off will get 401s.
+
+### Final review — whole project
+
+A fresh `general-purpose` subagent with no memory of the work got the prompt, the whole project (source, tests, build files, `RUNNING.md`, the token script) and this log. It was asked to:
+- re-run clean, build, format and test;
+- check every requirement;
+- judge the self-review list;
+- read `RUNNING.md` as a newcomer;
+- look for cross-cutting problems;
+- grade its findings.
+
+It was told to edit nothing and not to start SQL Server or the API.
+
+### Reviewer's report (as it came)
+
+#### Final review: Parts 1–5 against the whole of `prompts/01-generate.md`
+
+Reviewer: an independent agent with no prior context. I edited no files. I started no SQL Server or API myself, so RUNNING.md was not run end to end; the only containers were the test run's own Testcontainers instance.
+
+#### 1. Commands re-run (from `generative-ai-tools/`, working tree = HEAD b549798 + Part 5 files)
+
+| Command | Real result |
+|---|---|
+| `dotnet clean` | `Compilação com êxito. 0 Aviso(s) 0 Erro(s)` |
+| `dotnet build` | `Compilação com êxito. 0 Aviso(s) 0 Erro(s)` (both projects) |
+| `dotnet format --verify-no-changes` | exit code 0, no output (re-run alone to get the real exit code; my first run piped through `tail`, which hid it) |
+| `dotnet test` | `Resumo da execução de teste: Aprovado! total: 162 falhou: 0 concluído com êxito: 162 ignorados: 0 duração: 22s 686ms` |
+
+These match the Part 5 log (162/162, 0 warnings).
+
+#### 2. Findings
+
+#### Critical
+None.
+
+#### Important
+
+**I1. `tools/mint-dev-token.sh` will lose its executable bit when committed from this machine, so RUNNING.md step 5 fails on Linux and macOS.**
+- **Where:** `RUNNING.md` line 63 (`export TOKEN=$(tools/mint-dev-token.sh "$USER_ID")`) and line 5 ("On Linux and macOS, any bash works"). The script is still untracked.
+- **Why:** this repo has `core.filemode=false` (checked with `git config core.filemode`), so a file added on Windows is recorded as mode 100644. On Git Bash it still runs because of the shebang, which is why the Part 5 end-to-end run passed.
+- **Failure scenario:** a newcomer clones on Linux or macOS and follows the steps. Step 5 fails with `Permission denied`, `TOKEN` is empty, and every curl in step 7 returns 401.
+- **Fix:** run `git update-index --chmod=+x tools/mint-dev-token.sh` after adding the file, or change the docs to `bash tools/mint-dev-token.sh …` (line 63 and the usage line inside the script).
+
+#### Minor
+
+**M1. Two settings are written in two places: the issuer/audience and the connection-string key.**
+- `tools/mint-dev-token.sh:9-10` repeats `https://identity.task-management.local` and `task-management-api` from `appsettings.json`. If someone changes `Jwt:Issuer` or `Jwt:Audience` in `appsettings.json`, the script keeps signing valid-looking tokens that the API rejects with a bare 401 (`IncludeErrorDetails=false`), and nothing in the response points to the cause.
+- In the same way, `ApiFactory.cs:14` and `DesignTimeDbContextFactoryTests.cs:16,32` repeat the literal `"ConnectionStrings:TaskManagement"` although `DatabaseOptions.ConnectionStringKey` exists. That goes against the prompt's "no magic strings spread around".
+
+**M2. The list of allowed statuses is built in two places.** `TaskValidator.cs:9` builds `AllowedStatuses`, and `EnumNames.Allowed(Type)` (`Http/EnumNames.cs:8`) builds the same string. If the format changes in one place, binder errors and validator errors will list the statuses differently.
+
+**M3. Errors on the whole body get the key `""`, and no test covers them.**
+- **Where:** `ValidationProblemResponse.cs:50-55` maps the body-parameter key and `$` to `""`.
+- **Failure scenario:** `POST /api/tasks` with an empty body, or with malformed JSON such as `{"title":`, returns 400 with `errors: {"": [...]}`. That is not a camelCase field name, and no HTTP test covers either case. The behaviour is defensible, but it is untested and not mentioned anywhere.
+
+**M4. Some authentication edge cases have no tests.**
+- `RequireExpirationTime = true` (`JwtSetup.cs:49`): no test sends a token without `exp`.
+- No test sends a token whose `nbf` is in the future.
+- No test covers `SubjectValidatingJwtEvents` when the database throws (the user-exists lookup on every request). JwtBearer rethrows that, and it should become a 500 ProblemDetails, but this is unverified.
+
+**M5. The delete result carries a value nobody uses.** `TaskService.DeleteAsync` returns `TaskResult<Guid>.Success(taskId)`, and the controller throws the value away (`_ => NoContent()`). It is a placeholder type argument, not information.
+
+**M6. The SQL Server wait loop in RUNNING.md never times out.**
+- **Where:** RUNNING.md lines 19-20 (`until … sqlcmd …; do sleep 2; done`).
+- **Failure scenario:** port 14333 is already taken, or the container exits. `docker run` prints an error, but the loop keeps going silently, because `docker exec` fails and its output goes to `/dev/null`. The newcomer sees a hung terminal.
+
+**M7. The token script puts its arguments into JSON without escaping and does not check them.**
+- **Where:** `tools/mint-dev-token.sh:17`.
+- I ran it with `a"b` as the user id and it produced an invalid JSON payload. A non-numeric minutes value fails with `line 15: x: unbound variable`.
+- Impact is low: it is a development tool, and RUNNING.md always passes a Guid from sqlcmd.
+
+#### 3. Requirement check (prompt against code and tests)
+
+Everything below is met unless marked. "Partial" items are covered under section 4.
+
+- **Goal and REST:** one resource at `api/tasks`, plural, no verbs. GET, POST, PUT and DELETE have their standard meaning. POST returns 201 with an absolute `Location` (test `PostTask_ValidBody_Returns201WithLocation…`). PUT is idempotent in its fields (test `PutTask_SameBodyTwice…`). *Partial:* `updatedAt` advances on every identical PUT, and the test deliberately leaves `updatedAt` out of its comparison.
+- **Stack:** net10.0, SDK 10.0.403 with `latestFeature`, EF Core SqlServer and Design 10.0.9, JwtBearer 10.0.9, xunit.v3.mtp-v2 4.0.1, Mvc.Testing 10.0.9, Testcontainers.MsSql 4.15.0. Central package management, `Nullable`, `TreatWarningsAsErrors`, nuget.org only. Test tokens are minted with `JsonWebTokenHandler`. The only extra package is the Pkcs pin, which the self-review discloses.
+- **Architecture:**
+  - Folders match the tree.
+  - The controller only binds and maps, and gets the user only through `ICurrentUser` (via the service).
+  - The service returns `TaskResult` (Success, ValidationFailed, NotFound) and scopes every call to `currentUser.UserId`.
+  - Every repository method takes the owner id except `AddAsync` (disclosed). `UpdateAsync` refuses a task whose owner does not match.
+  - Only DTOs leave the API (a test asserts the exact property set, with no `userId`).
+  - Time comes from `TimeProvider` (UTC).
+  - Settings use options classes: `JwtOptions`, validated at startup with a key of at least 32 UTF-8 bytes, and `DatabaseOptions`.
+- **Data model:**
+  - `Users` has a unique `Email`.
+  - `Title` is required, 1–200 characters, and trimmed (validator, entity, DB length, plus a check constraint).
+  - `Description` is up to 2000 characters, and blank becomes null.
+  - `Status` is stored as a string (`nvarchar(20)`, DB test) and defaults to `Todo`.
+  - `DueDate` is a `date`. `CreatedAt` and `UpdatedAt` are UTC `datetimeoffset`.
+  - The foreign key to `Users` is enforced, and `UserId` is indexed through the clustered `(UserId, CreatedAt)` index.
+  - The migration matches the configurations: I read it, and `HasPendingModelChanges` is false in a test.
+- **Authentication:**
+  - Issuer, audience, lifetime, signing key and HS256 only are all validated; `RequireSignedTokens` is on.
+  - No secret is committed: `appsettings.json` has only issuer and audience, and tests use their own key.
+  - `sub` is the only source of the user id (`MapInboundClaims=false`).
+  - A non-Guid, empty or missing `sub` gives 401, and so does a `sub` with no matching user (disclosed).
+  - A fallback policy requires an authenticated user on every endpoint.
+- **Endpoints and status codes:** all five rows of the table are covered by HTTP tests, including 404 for another user's task on GET, PUT and DELETE (the same ProblemDetails shape as a missing task), and B never seeing A's tasks in the list, with or without a status filter.
+- **Enums:** sent and returned as names. Numbers, numeric strings and flag combinations are rejected in both JSON and the query string. Input is case-insensitive (disclosed).
+- **ProblemDetails:** sent as `application/problem+json` for 400, 401, 404 and 500. Field errors use camelCase keys. Outside Development, a 500 carries no exception text (test). The 401 challenge has no `error_description` (test).
+- **Paging:** `page` must be at least 1 and is protected against overflow. `pageSize` must be 1–100 and defaults to 20. The response is `{items, page, pageSize, totalCount}`. Order is due date with no-date tasks last, then `CreatedAt`, then `Id`.
+- **Acceptance criteria for each part:** every listed test case exists. I matched them by name: Part 2's unit cases, Part 3's database, isolation, filter, sort and paging cases, and Part 4's 401, 404, 400, 201 and round-trip cases.
+- **Rules:**
+  - No MediatR, AutoMapper or mocking library. The fakes are named and hand-written: `FakeTaskRepository`, `FixedCurrentUser`, `ManualClock`.
+  - Migrations come from `dotnet ef` through the local tool manifest, and tests apply them with `MigrateAsync`.
+- **"Do not commit": not followed.** Parts 1–4 are committed (`ffc9105`..`b549798`). This was presumably the human's call, but the self-review doesn't mention it (see section 4).
+
+#### 4. Is the Part 5 self-review complete and honest?
+
+It is honest. I checked all 13 items against the code and they are accurate. For example, there are exactly five `<summary>` blocks and no other comments outside the migrations; `LEN` and the cascade delete behave as described; the test suite really does need Docker. These omissions are not in the list:
+
+1. **Repeated identical PUTs change `updatedAt`.** The idempotency test excludes that field. It is a defensible reading of "PUT idempotent", but it differs from the letter of the prompt.
+2. **"Do not commit" was not followed.** Parts 1–4 are in git history. If the human made the commits on purpose, one line saying so would close this.
+3. **Errors on the whole body use the key `""`** (M3), not a camelCase field name.
+4. **`User.Email` (320) and `User.Name` (200, required) have length limits the prompt doesn't set.** They are harmless, but they are additions just like the ones the list does cover.
+5. **The JWT clock skew is 30 s instead of the default 5 minutes, and HS256 is the only allowed algorithm.** Both are stricter than the prompt asks. They are worth one line, since a newcomer with a slightly skewed clock will see 401s sooner.
+
+None of these changes the conclusion that every requirement is implemented.
+
+#### 5. RUNNING.md and the token script, read as a newcomer
+
+- **The token matches what the API checks.** I ran the script with a dummy 40-byte key and a Guid, then decoded the token:
+  - header: `{"alg":"HS256","typ":"JWT"}`
+  - payload: `{"sub":"5981E58B-…","iss":"https://identity.task-management.local","aud":"task-management-api","iat":…,"nbf":…,"exp":…+3600}`
+
+  The signature checks out independently with Node's `crypto.createHmac('sha256', utf8(key))`, which is how the API builds its key (`Encoding.UTF8.GetBytes`). The hex key from `openssl rand -hex 32` is 64 ASCII bytes, so it passes the 32-byte check. The upper-case Guid from sqlcmd parses with `Guid.TryParse`. The token also passes the user-exists check and the 30 s skew. The log's end-to-end run (201, 200, 200, 200, 204, 404, 401) agrees.
+- **The order of the steps works.** `SA_PASSWORD` and `TASKS_JWT_SIGNING_KEY` are used in the same terminal they were set in. The second terminal for `dotnet run` needs no variables, because the API reads user secrets in Development. `dotnet ef database update` reads the same user secrets through `DesignTimeDbContextFactory`. Cleanup is complete.
+- **Problems:** the executable bit (I1), the issuer and audience written in two places (M1), and the wait loop with no timeout (M6). Otherwise a newcomer could follow it as written.
+
+#### 6. Cross-cutting checks found fine
+
+- **Layers:** dependencies point Controller → TaskService → ITaskRepository → EF. `Data` uses the `TaskValidator` length constants, so there is one source of truth. The authentication layer reaches the database only through `IUserRepository`.
+- **Size:** no file is over 272 lines (`EfTaskRepositoryTests`), no method is over about 20 lines, and indentation stays within 2 levels.
+- **Dead code:** none found. `TaskValidator.AddUndefinedStatusError` can't be reached over HTTP, but it is defence in depth and has unit tests.
+- **Exception messages** include the offending value and the expected shape.
+- **Security:** `IncludeErrorDetails=false`, `AllowInputFormatterExceptionMessages=false`, and no `userId` in requests or responses (a test sends a planted `userId`/`ownerId` and checks it is ignored). Delete uses `ExecuteDeleteAsync` scoped to the owner. A PUT racing a DELETE returns 404 and is tested at the unit, repository and HTTP levels.
+- **Tests:** they are isolated (one database per test inside one assembly-wide container), repeatable (time is fixed with `ManualClock`), and their names follow `Method_Scenario_Result`.
+
+#### Summary of grades
+
+**Critical:** none.
+
+**Important:** I1, the script's executable bit and the RUNNING.md step 5 call on Linux and macOS.
+
+**Minor:** M1–M7.
+
+**Self-review:** honest, with five small omissions (section 4).
+
+### Decisions
+
+| # | Finding | Decision |
+|---|---|---|
+| I1 | The script loses its executable bit when committed from Windows, so step 5 fails on Linux and macOS | **Fixed in the docs.** `RUNNING.md` step 5 and the script's usage line now say `bash tools/mint-dev-token.sh …`, which works whatever mode the file has, and `RUNNING.md` explains why. I did not run `git update-index --chmod=+x`: that changes the git index, and staging is the human's step. The human may do it when committing, but the docs no longer depend on it. Verified by the second end-to-end run below. |
+| M1 | Issuer and audience are repeated in the script; the connection-string key is repeated in tests | **Fixed.** <br>• **Script:** it can't read `appsettings.json` without a JSON tool. It already honoured `TASKS_JWT_ISSUER` / `TASKS_JWT_AUDIENCE`, so `RUNNING.md` now documents them and says what happens without them: a bare 401, because the API doesn't explain rejections. <br>• **Tests:** `ApiFactory.ConnectionStringKey` now equals `DatabaseOptions.ConnectionStringKey`, and `DesignTimeDbContextFactoryTests` uses that constant instead of the literal. This is a test-only refactor, still green. |
+| M2 | The allowed-status list is built in two places | **Declined.** The validator is the domain rule and `EnumNames` is the HTTP input format. Making `Tasks/TaskValidator` call `Http/EnumNames` would point a dependency from the core outward. Each is a one-line `string.Join` over `Enum.GetNames`, so nothing they share can drift except the separator. |
+| M3 | Whole-body errors have key `""` and no test | **Tested, and recorded as item 16 of the list.** `PostTask_BodyThatIsNotATaskObject_Returns400WithWholeBodyErrorKey` (empty body and `[]` → `[""]`). One case the reviewer expected to give `""` doesn't: JSON cut off inside a field (`{"title":`) is reported at `$.title`, so its key is `title`, which is the right place and still a camelCase field name. My first test had expected `""` too. It failed with `Expected: "" / Actual: "title"`, I judged the behavior correct and my expectation wrong, and split it into `PostTask_JsonCutOffInsideAField_Returns400KeyedByThatField`. No production code changed. |
+| M4 | No tests for a token without `exp`, a future `nbf`, or the user lookup failing | **Tested.** I added `TestTokens.NotYetValid` (nbf = now + 10 min, beyond the 30 s skew) and `TestTokens.WithoutExpiry` (a handler with `SetDefaultTimesOnTokenCreation = false`, so the token really has no `exp`), plus a named fake `UnreachableUserRepository`. The tests: <br>• `GetTasks_TokenNotValidYet_Returns401`; <br>• `GetTasks_TokenWithoutExpiry_Returns401`; <br>• `GetTasks_UserLookupFails_Returns500ProblemWithoutDetails` (a 500 `application/problem+json` without the exception text). <br>All three passed on their first run. They cover behavior that already existed, so there was no red to show. They now pin it down. |
+| M5 | The delete result carries a value nobody uses | **Declined**, the same decision as in part 2: one result type for the controller to map is simpler than a second two-case type made only for delete. The id is the deleted task's id, which is correct even if unused. |
+| M6 | The SQL Server wait loop never times out | **Fixed.** `RUNNING.md` step 1 now tries 45 times, 2 s apart (90 s), then prints `SQL Server did not start in 90 s; see: docker logs taskmgmt-sql`. A note explains that a failed `docker run`, such as a port already taken, prints its own error first, and how to remove the container before retrying. Verified in the second end-to-end run (`SQL Server ready` on the new loop). |
+| M7 | The token script doesn't validate its arguments | **Fixed.** The user id must match the Guid pattern and the minutes must be 1–99999, otherwise the script prints the expected shape and the value it got and exits with 2. Before and after are below. The reviewer's `a"b` case gave a token with invalid JSON and exit 0, and `x` minutes gave `line 15: x: unbound variable`. |
+| §4 | Five omissions from the self-review list | **Added** as items 14–18 above. Item 15 (commits) was the human's call, as `PLAN.md` describes, and I committed nothing. |
+
+### Token script before and after the fix (M7)
+
+Before (the script as it was in the first Part 5 run, with a dummy 40-character key):
+
+```
+$ bash tools/mint-dev-token.sh 'a"b'
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhImIiLCJpc3MiOiJodHRwczovL2lkZW50aXR5LnRhc2stbWFuYWdlbWVudC5sb2NhbCIsImF1ZCI6InRhc2stbWFuYWdlbWVudC1hcGkiLCJpYXQiOjE3OTQ0MTcwNzQsIm5iZiI6MTc5NDQxNzA3NCwiZXhwIjoxNzk0NDIwNjc0fQ.NNywVEvQ5QE6hDbF2bj0Hr-6E6-iEWpDJQeAz7Dg09s
+exit=0
+$ bash tools/mint-dev-token.sh 5981E58B-AC08-434D-9070-72777ED400A0 x
+tools/mint-dev-token.sh: line 15: x: unbound variable
+exit=1
+```
+
+After:
+
+```
+$ bash tools/mint-dev-token.sh a"b
+user id must be a Guid like 5981E58B-AC08-434D-9070-72777ED400A0; got 'a"b'. usage: bash tools/mint-dev-token.sh <user-guid> [minutes]
+exit=2
+$ bash tools/mint-dev-token.sh 5981E58B-AC08-434D-9070-72777ED400A0 x
+minutes must be a whole number from 1 to 99999; got 'x'. usage: bash tools/mint-dev-token.sh <user-guid> [minutes]
+exit=2
+$ bash tools/mint-dev-token.sh 5981E58B-AC08-434D-9070-72777ED400A0 0
+minutes must be a whole number from 1 to 99999; got '0'. usage: bash tools/mint-dev-token.sh <user-guid> [minutes]
+exit=2
+$ bash tools/mint-dev-token.sh 5981E58B-AC08-434D-9070-72777ED400A0 5   (payload decoded)
+{"sub":"5981E58B-AC08-434D-9070-72777ED400A0","iss":"https://identity.task-management.local","aud":"task-management-api","iat":1794417089,"nbf":1794417089,"exp":1794417389}
+```
+
+### Second end-to-end run of the revised `RUNNING.md`
+
+Steps 1 and 5 changed (the bounded wait loop, `bash tools/mint-dev-token.sh`), so I followed the instructions again in the same way: a fresh `taskmgmt-sql` container on port 14333 (checked free), empty user secrets, and the commands from the new text. Status lines and bodies:
+
+```
+===== 1. Start a SQL Server =====
+SQL Server ready
+===== 3. Create the database =====
+Applying migration '20261111161722_InitialCreate'.
+Done.
+===== 4. Add a user =====
+D9E30FAD-B731-4378-87A8-01313A6D23BC
+===== 5. Get a token =====
+token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ... (length 311)
+===== 6. Run the API (background in this session) =====
+      Now listening on: http://localhost:5180
+===== 7. Call it =====
+HTTP/1.1 201 Created
+{"id":"c336f576-e549-4be4-93e0-ccd852bfe521","title":"Plan lesson 3","description":"Past simple","status":"Todo","dueDate":"2026-12-01","createdAt":"2026-11-11T17:12:18.4012447+00:00","updatedAt":"2026-11-11T17:12:18.4012447+00:00"}
+HTTP/1.1 200 OK
+{"items":[{"id":"c336f576-e549-4be4-93e0-ccd852bfe521",...}],"page":1,"pageSize":20,"totalCount":1}
+HTTP/1.1 200 OK
+{"id":"c336f576-e549-4be4-93e0-ccd852bfe521","title":"Plan lesson 3","description":"Past simple","status":"Todo",...}
+HTTP/1.1 200 OK
+{"id":"c336f576-e549-4be4-93e0-ccd852bfe521","title":"Plan lesson 3","description":"Past simple vs present perfect","status":"InProgress","dueDate":"2026-12-02","createdAt":"2026-11-11T17:12:18.4012447+00:00","updatedAt":"2026-11-11T17:12:19.6122469+00:00"}
+HTTP/1.1 204 No Content
+HTTP/1.1 404 Not Found
+{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Task not found","status":404,"traceId":"00-633ce1aa8cda3f0a58a9cf4efa1bf50e-4b7b70a9d4b09ec1-00"}
+HTTP/1.1 401 Unauthorized
+{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.2","title":"Unauthorized","status":401,"traceId":"00-b2dfb06e3654e293e6cee9a5ff730cdc-3203462489691ea9-00"}
+===== 8. Clean up =====
+taskmgmt-sql
+No secrets configured for this application.
+```
+
+(Repeated list and get bodies shortened with `...` here; the raw output had them in full.) After the run, `docker ps -a --filter name=taskmgmt-sql` is empty, no `TaskManagement.Api` process remains, and the user secrets are empty again.
+
+### Final build, format and test
+
+Command: `dotnet clean`, then `dotnet build`
+
+```
+Compilação com êxito.
+    0 Aviso(s)
+    0 Erro(s)
+```
+
+Command: `dotnet format --verify-no-changes` → exit 0, no output.
+
+Command: `dotnet test`
+
+```
+Resumo da execução de teste: Aprovado!
+  total: 168
+  falhou: 0
+  concluído com êxito: 168
+  ignorados: 0
+  duração: 25s 669ms
+```
+
+168 = the 162 from Part 4, plus 3 authentication tests (M4), plus 3 body-error cases (M3: the 2-row theory and the cut-off-JSON test).
+
+All five parts are done. Nothing was committed by me.

@@ -1,5 +1,7 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using TaskManagement.Api.Users;
 
 namespace TaskManagement.Tests.Integration.Http;
 
@@ -49,6 +51,30 @@ public sealed class AuthenticationTests(SqlServerFixture sqlServer)
     public async Task GetTasks_ExpiredToken_Returns401()
     {
         await AssertRejectedAsync(api => TestTokens.Expired(api.UserAId));
+    }
+
+    [Fact]
+    public async Task GetTasks_TokenNotValidYet_Returns401()
+    {
+        await AssertRejectedAsync(api => TestTokens.NotYetValid(api.UserAId));
+    }
+
+    [Fact]
+    public async Task GetTasks_TokenWithoutExpiry_Returns401()
+    {
+        await AssertRejectedAsync(api => TestTokens.WithoutExpiry(api.UserAId));
+    }
+
+    [Fact]
+    public async Task GetTasks_UserLookupFails_Returns500ProblemWithoutDetails()
+    {
+        await using var api = await TwoUserApi.StartAsync(
+            sqlServer, Cancellation, services => services.AddScoped<IUserRepository, UnreachableUserRepository>());
+
+        using var response = await api.UserA.GetAsync("/api/tasks", Cancellation);
+
+        var problem = await ApiJson.ReadProblemAsync(response, HttpStatusCode.InternalServerError);
+        Assert.DoesNotContain(UnreachableUserRepository.Detail, problem.GetRawText());
     }
 
     [Fact]
@@ -117,5 +143,13 @@ public sealed class AuthenticationTests(SqlServerFixture sqlServer)
         using var response = await client.GetAsync("/api/tasks", Cancellation);
 
         await ApiJson.ReadProblemAsync(response, HttpStatusCode.Unauthorized);
+    }
+
+    private sealed class UnreachableUserRepository : IUserRepository
+    {
+        public const string Detail = "Users table unreachable 4c1e";
+
+        public Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException(Detail);
     }
 }

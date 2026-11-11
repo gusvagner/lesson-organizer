@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TaskManagement.Api.Data;
 
 namespace TaskManagement.Tests.Integration;
 
@@ -11,7 +12,7 @@ public sealed class ApiFactory(
     IReadOnlyDictionary<string, string?> settings, Action<IServiceCollection>? replaceServices = null)
     : WebApplicationFactory<Program>
 {
-    public const string ConnectionStringKey = "ConnectionStrings:TaskManagement";
+    public const string ConnectionStringKey = DatabaseOptions.ConnectionStringKey;
     public const string UnusedConnectionString = "Server=unused-in-this-test;Database=TaskManagement";
 
     public ApiFactory()

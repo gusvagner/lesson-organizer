@@ -13,7 +13,7 @@ public sealed class DesignTimeDbContextFactoryTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:TaskManagement"] = "Server=from-user-secrets;Database=TaskManagement",
+                [DatabaseOptions.ConnectionStringKey] = "Server=from-user-secrets;Database=TaskManagement",
             })
             .Build();
 
@@ -29,7 +29,7 @@ public sealed class DesignTimeDbContextFactoryTests
     public void Create_NoOrBlankConnectionString_UsesMigrationsOnlyPlaceholder(string? configured)
     {
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:TaskManagement"] = configured })
+            .AddInMemoryCollection(new Dictionary<string, string?> { [DatabaseOptions.ConnectionStringKey] = configured })
             .Build();
 
         using var context = DesignTimeDbContextFactory.Create(configuration);

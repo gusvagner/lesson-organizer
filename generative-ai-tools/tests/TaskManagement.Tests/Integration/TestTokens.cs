@@ -29,6 +29,22 @@ public static class TestTokens
     public static string Unsigned(Guid userId) =>
         Create(userId.ToString(), TestJwtSettings.Issuer, TestJwtSettings.Audience, null, DateTime.UtcNow + ValidFor);
 
+    public static string NotYetValid(Guid userId) =>
+        Create(userId.ToString(), TestJwtSettings.Issuer, TestJwtSettings.Audience, TestJwtSettings.SigningKey, DateTime.UtcNow.AddMinutes(70));
+
+    public static string WithoutExpiry(Guid userId)
+    {
+        var handler = new JsonWebTokenHandler { SetDefaultTimesOnTokenCreation = false };
+        return handler.CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = TestJwtSettings.Issuer,
+            Audience = TestJwtSettings.Audience,
+            Claims = new Dictionary<string, object> { ["sub"] = userId.ToString() },
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TestJwtSettings.SigningKey)), SecurityAlgorithms.HmacSha256),
+        });
+    }
+
     private static string Create(string? subject, string issuer, string audience, string? signingKey, DateTime expires)
     {
         var descriptor = new SecurityTokenDescriptor

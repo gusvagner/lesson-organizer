@@ -142,3 +142,28 @@ The generating agent dispatched a fresh reviewer subagent, pasted its report as 
 **Real bug found because of the reviewer, by the agent:** the reviewer marked "comma-separated status" as *not verified*; the agent tested it and found that JSON `"status":"Todo, InProgress"` was accepted and stored as `InProgress` — `JsonStringEnumConverter` parses flags syntax even for a non-flags enum. Fixed test-first with a name-only converter shared with the query binder. This is the best example so far for the answer: a plausible line of AI-generated code with a subtle framework behaviour, caught only because "not verified" was treated as a question, not a pass.
 
 **Result:** part 4 accepted. Left for part 5: the HTTPS note and run instructions (user secrets for `Jwt:SigningKey` and the connection string; `dotnet ef database update`).
+
+## Part 5 — Final check (2026-11-11, prompt v5)
+
+**Re-run by me:** `dotnet build` → 0 warnings, 0 errors; `dotnet format --verify-no-changes` → exit 0; `dotnet test` → 168 total, 0 failed.
+
+**`RUNNING.md` followed by me, as written, end to end** (steps 1–8 copied into a script outside the repository; throwaway container `taskmgmt-sql` on port 14333; the Lesson Organizer's containers untouched):
+
+| Step | Result |
+|---|---|
+| 1. SQL Server | ready |
+| 2. user secrets | both saved |
+| 3. `dotnet ef database update` | `Applying migration '20261111161722_InitialCreate'. Done.` |
+| 4. user | inserted, id returned |
+| 5. `bash tools/mint-dev-token.sh` | a three-part JWT |
+| 6. `dotnet run` | listening on `http://localhost:5180` |
+| 7. calls | create 201 + `Location`; list 200; get 200; put 200 (`updatedAt` moved, `createdAt` kept); delete 204; get after delete 404 ProblemDetails; no token 401 `application/problem+json`; `?status=1` 400 `"The value must be one of Todo, InProgress, Done; got '1'."` |
+| 8. clean up | container removed, user secrets cleared, ports 14333 and 5180 free again |
+
+**Read by me:** the token script validates its arguments, takes the key from an environment variable, and signs header and payload with `openssl dgst -sha256 -hmac`; `dotnet user-jwts` was rightly rejected (it configures `Authentication:Schemes:Bearer`, which this API does not read). The HTTPS decision (plain HTTP, TLS at a proxy, a warning not to expose the port) is reasonable for this scope and stated in `RUNNING.md`.
+
+**Finding of mine (for the triage phase):** a POST body with an unknown property is accepted and the property is silently ignored. Sending `"status":"Todo, InProgress"` on create returned 201 with status `Todo`: `CreateTaskRequest` has no `status`, and System.Text.Json skips unmapped members by default. A client that sends a status on create gets `Todo` with no warning. Not a security issue; arguable as API design (the alternative is `JsonUnmappedMemberHandling.Disallow` → 400). No test or reviewer covered it.
+
+**The final reviewer (whole project):** 0 Critical, 1 Important, 7 Minor; found every requirement implemented and called the agent's self-review honest with five omissions, which the agent then added (items 14–18). Decisions: I1 the script loses its executable bit when committed from Windows → `RUNNING.md` invokes it with `bash` (agree); M1 duplicated issuer/audience and connection-string key (fixed); M2 status list built twice (declined: merging would make the validator depend on the HTTP layer — agree); M3 whole-body errors untested (tests added; the agent and the reviewer both expected the wrong key for truncated JSON, and the agent corrected its expectation instead of the code — agree); M4 three auth cases added (they passed on first run; logged honestly); M5 delete returns an unused id (declined, as in part 2); M6/M7 wait-loop timeout and script argument checks (fixed).
+
+**Result:** part 5 accepted. Generation finished: 5 parts, 168 tests, independent review in every part from part 1 on, and the run instructions verified by a person following them.
