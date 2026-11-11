@@ -6,6 +6,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { chooseOption, click, query, settle, textOf, typeInto } from '../../testing/dom';
 import { pageFakes, providePageFakes } from '../../testing/page-fakes';
 import { aStudent } from '../students/testing/fake-students-api';
+import { By } from '@angular/platform-browser';
+import { LessonPlanForm } from './components/lesson-plan-form';
 import { LessonPlanFormPage } from './lesson-plan-form-page';
 import { aLessonPlan } from './testing/fake-lesson-plans-api';
 
@@ -100,6 +102,21 @@ describe('LessonPlanFormPage', () => {
     await harness.fixture.whenStable();
     expect(pageFakes().plans.plans[0].title).toBe('Review 2');
     expect(TestBed.inject(Router).url).toBe('/lesson-plans');
+  });
+
+  it('save emitted twice quickly → one request', async () => {
+    await open('/lesson-plans/p1/edit');
+    const form = harness.fixture.debugElement.query(By.directive(LessonPlanForm));
+    const request = {
+      studentId: 's1',
+      title: 'Review',
+      description: null,
+      lessonDate: '2026-11-12',
+    };
+    (form.componentInstance as LessonPlanForm).save.emit(request);
+    (form.componentInstance as LessonPlanForm).save.emit(request);
+    await settle();
+    expect(pageFakes().plans.responder.calls.filter((call) => call === 'update')).toHaveLength(1);
   });
 
   it('edit unknown id → "Not found", navigates /lesson-plans', async () => {

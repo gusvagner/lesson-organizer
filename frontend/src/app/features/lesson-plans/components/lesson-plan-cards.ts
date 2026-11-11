@@ -35,6 +35,7 @@ import { StatusSelect } from './status-select';
         <mat-card-actions>
           <lo-status-select
             [status]="plan.status"
+            [label]="'Status of ' + plan.title"
             [disabled]="saving()"
             (statusChange)="statusChange.emit({ id: plan.id, status: $event })"
           />

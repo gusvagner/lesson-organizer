@@ -5,13 +5,13 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideHttpClient, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
-import { provideNativeDateAdapter } from '@angular/material/core';
 import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { AuthStore } from './core/auth/auth-store';
 import { unauthorizedInterceptor } from './core/http/unauthorized-interceptor';
 import { xsrfRetryInterceptor } from './core/http/xsrf-retry-interceptor';
+import { provideLessonDateAdapter } from './shared/dates/lesson-date-adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,7 +21,7 @@ export const appConfig: ApplicationConfig = {
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
       withInterceptors([xsrfRetryInterceptor, unauthorizedInterceptor]),
     ),
-    provideNativeDateAdapter(),
+    provideLessonDateAdapter(),
     { provide: MAT_ICON_DEFAULT_OPTIONS, useValue: { fontSet: 'material-symbols-outlined' } },
     provideAppInitializer(() => inject(AuthStore).restoreSession()),
   ],

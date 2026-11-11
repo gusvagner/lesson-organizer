@@ -4,6 +4,8 @@ import { Router, provideRouter, withComponentInputBinding } from '@angular/route
 import { RouterTestingHarness } from '@angular/router/testing';
 import { chooseOption, click, settle, textOf, typeInto } from '../../testing/dom';
 import { pageFakes, providePageFakes } from '../../testing/page-fakes';
+import { By } from '@angular/platform-browser';
+import { StudentForm } from './components/student-form';
 import { StudentFormPage } from './student-form-page';
 import { aStudent } from './testing/fake-students-api';
 
@@ -61,6 +63,25 @@ describe('StudentFormPage', () => {
     await submit(root);
     expect(pageFakes().students.students[0].name).toBe('Ana Maria');
     expect(TestBed.inject(Router).url).toBe('/students/s1');
+  });
+
+  it('edit when loading fails with 500 → no form, generic message', async () => {
+    pageFakes().students.responder.fail('get', 500);
+    const root = await open('/students/s1/edit');
+    expect(root.querySelector('form')).toBeNull();
+    expect(pageFakes().feedback.messages).toEqual(['Something went wrong. Try again.']);
+  });
+
+  it('save emitted twice quickly → one request', async () => {
+    await open('/students/s1/edit');
+    const form = harness.fixture.debugElement.query(By.directive(StudentForm));
+    const request = { name: 'Ana', email: null, englishLevel: 'Beginner' as const, notes: null };
+    (form.componentInstance as StudentForm).save.emit(request);
+    (form.componentInstance as StudentForm).save.emit(request);
+    await settle();
+    expect(pageFakes().students.responder.calls.filter((call) => call === 'update')).toHaveLength(
+      1,
+    );
   });
 
   it('edit with unknown id → "Not found" and /students', async () => {

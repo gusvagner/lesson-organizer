@@ -2,22 +2,20 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/comm
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
-import { AuthApi } from '../auth/auth-api';
 import { AuthStore } from '../auth/auth-store';
-import { toOutcome } from './outcome';
+import { PageReloader } from '../auth/page-reloader';
 
 const AUTH_URL_PREFIX = '/api/auth/';
 
 export const unauthorizedInterceptor: HttpInterceptorFn = (request, next) => {
   const authStore = inject(AuthStore);
-  const authApi = inject(AuthApi);
+  const reloader = inject(PageReloader);
   const router = inject(Router);
   return next(request).pipe(
     catchError((error: unknown) => {
       if (isLostSession(request, error)) {
         authStore.clear();
-        void toOutcome(authApi.csrf());
-        void router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
+        reloader.load(`/login?returnUrl=${encodeURIComponent(router.url)}`);
       }
       return throwError(() => error);
     }),

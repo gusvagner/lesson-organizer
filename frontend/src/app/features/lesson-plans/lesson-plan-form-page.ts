@@ -14,6 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Feedback } from '../../core/feedback/feedback';
 import { ApiProblem } from '../../core/http/api-problem';
 import { Outcome } from '../../core/http/outcome';
+import { OneSubmission } from '../../core/state/one-submission';
 import { EmptyState } from '../../shared/empty-state/empty-state';
 import { LessonPlanStatusLabel } from '../../shared/labels/lesson-plan-status-label';
 import { StudentsStore } from '../students/students-store';
@@ -45,6 +46,7 @@ export class LessonPlanFormPage {
   readonly studentId = input<string | undefined>();
 
   protected readonly problem = signal<ApiProblem | null>(null);
+  protected readonly submission = new OneSubmission();
   protected readonly studentsLoaded = signal(false);
   protected readonly plan = computed(() => {
     const plan = this.store.selected();
@@ -63,25 +65,28 @@ export class LessonPlanFormPage {
     void this.router.navigate(['/students/new']);
   }
 
-  protected async save(request: LessonPlanRequest): Promise<void> {
-    this.problem.set(null);
-    const id = this.id();
-    const outcome =
-      id === undefined ? await this.store.create(request) : await this.store.update(id, request);
-    await this.handleSaved(outcome);
+  protected save(request: LessonPlanRequest): Promise<void> {
+    return this.submission.run(async () => {
+      this.problem.set(null);
+      const id = this.id();
+      const outcome =
+        id === undefined ? await this.store.create(request) : await this.store.update(id, request);
+      return this.handleSaved(outcome);
+    });
   }
 
-  private async handleSaved(outcome: Outcome<LessonPlanResponse>): Promise<void> {
+  private async handleSaved(outcome: Outcome<LessonPlanResponse>): Promise<boolean> {
     if (outcome.ok) {
       this.feedback.success('Lesson plan saved');
       await this.router.navigateByUrl(this.returnPath(outcome.value));
-      return;
+      return true;
     }
     if (Object.keys(outcome.problem.fieldErrors).length > 0) {
       this.problem.set(outcome.problem);
-      return;
+      return false;
     }
     await this.showFailure(outcome.problem);
+    return false;
   }
 
   private returnPath(saved: LessonPlanResponse): string {

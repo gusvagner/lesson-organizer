@@ -10,6 +10,9 @@ export class FakeFeedback implements PublicApi<Feedback> {
   }
 
   failure(problem: ApiProblem): void {
-    this.messages.push(failureMessage(problem));
+    const message = failureMessage(problem);
+    if (message !== null) {
+      this.messages.push(message);
+    }
   }
 }

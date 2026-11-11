@@ -14,6 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Feedback } from '../../core/feedback/feedback';
 import { ApiProblem } from '../../core/http/api-problem';
 import { Outcome } from '../../core/http/outcome';
+import { OneSubmission } from '../../core/state/one-submission';
 import { StudentForm } from './components/student-form';
 import { StudentRequest, StudentResponse } from './student.model';
 import { StudentsStore } from './students-store';
@@ -27,12 +28,14 @@ import { StudentsStore } from './students-store';
       Back
     </a>
     <h1>{{ id() ? 'Edit student' : 'New student' }}</h1>
-    <lo-student-form
-      [student]="student()"
-      [saving]="store.saving()"
-      [problem]="problem()"
-      (save)="save($event)"
-    />
+    @if (id() === undefined || student()) {
+      <lo-student-form
+        [student]="student()"
+        [saving]="submission.active()"
+        [problem]="problem()"
+        (save)="save($event)"
+      />
+    }
   `,
   styleUrl: '../../shared/layout/page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,9 +48,12 @@ export class StudentFormPage {
   readonly id = input<string | undefined>();
 
   protected readonly problem = signal<ApiProblem | null>(null);
+  protected readonly submission = new OneSubmission();
+  private readonly loadedId = signal<string | null>(null);
   protected readonly student = computed(() => {
     const student = this.store.selected();
-    return this.id() !== undefined && student?.id === this.id() ? student : null;
+    const id = this.id();
+    return id !== undefined && this.loadedId() === id && student?.id === id ? student : null;
   });
   protected readonly backLink = computed(() => {
     const id = this.id();
@@ -61,32 +67,37 @@ export class StudentFormPage {
     });
   }
 
-  protected async save(request: StudentRequest): Promise<void> {
-    this.problem.set(null);
-    const id = this.id();
-    const outcome =
-      id === undefined ? await this.store.create(request) : await this.store.update(id, request);
-    await this.handleSaved(outcome);
+  protected save(request: StudentRequest): Promise<void> {
+    return this.submission.run(async () => {
+      this.problem.set(null);
+      const id = this.id();
+      const outcome =
+        id === undefined ? await this.store.create(request) : await this.store.update(id, request);
+      return this.handleSaved(outcome);
+    });
   }
 
-  private async handleSaved(outcome: Outcome<StudentResponse>): Promise<void> {
+  private async handleSaved(outcome: Outcome<StudentResponse>): Promise<boolean> {
     if (outcome.ok) {
       this.feedback.success('Student saved');
       await this.router.navigate(['/students', outcome.value.id]);
-      return;
+      return true;
     }
     if (Object.keys(outcome.problem.fieldErrors).length > 0) {
       this.problem.set(outcome.problem);
-      return;
+      return false;
     }
     await this.showFailure(outcome.problem);
+    return false;
   }
 
   private async load(id: string): Promise<void> {
     const outcome = await this.store.loadOne(id);
     if (!outcome.ok) {
       await this.showFailure(outcome.problem);
+      return;
     }
+    this.loadedId.set(id);
   }
 
   private async showFailure(problem: ApiProblem): Promise<void> {

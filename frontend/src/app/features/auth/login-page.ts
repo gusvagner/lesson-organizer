@@ -58,7 +58,7 @@ export class LoginPage {
   }
 }
 
-function loginFailureMessage(problem: ApiProblem): string {
+function loginFailureMessage(problem: ApiProblem): string | null {
   if (problem.status === 401) {
     return problem.detail ?? 'Invalid email or password.';
   }

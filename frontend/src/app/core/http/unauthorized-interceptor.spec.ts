@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthStore } from '../auth/auth-store';
-import { fakeAuthApi, provideFakeAuth } from '../auth/testing/auth-testing';
+import { fakeAuthApi, fakePageReloader, provideFakeAuth } from '../auth/testing/auth-testing';
 import { unauthorizedInterceptor } from './unauthorized-interceptor';
 
 @Component({ template: '' })
@@ -41,15 +41,25 @@ describe('unauthorizedInterceptor', () => {
 
   afterEach(() => http.verify());
 
-  it('401 from /api/students → clears user, refreshes csrf, navigates to login with returnUrl', async () => {
+  it('401 from /api/students → clears user and full page load of login with returnUrl', async () => {
     let failed = false;
     client.get('/api/students/5').subscribe({ error: () => (failed = true) });
     http.expectOne('/api/students/5').flush(null, { status: 401, statusText: 'Unauthorized' });
     await settle();
     expect(failed).toBe(true);
     expect(store.currentUser()).toBeNull();
-    expect(fakeAuthApi().calls).toEqual(['csrf']);
-    expect(TestBed.inject(Router).url).toBe('/login?returnUrl=%2Fstudents%2F5');
+    expect(fakePageReloader().loaded).toEqual(['/login?returnUrl=%2Fstudents%2F5']);
+  });
+
+  it('two 401s at once → both reload to the same returnUrl', async () => {
+    client.get('/api/students').subscribe({ error: () => undefined });
+    client.get('/api/lesson-plans').subscribe({ error: () => undefined });
+    http.expectOne('/api/students').flush(null, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne('/api/lesson-plans').flush(null, { status: 401, statusText: 'Unauthorized' });
+    await settle();
+    expect(new Set(fakePageReloader().loaded)).toEqual(
+      new Set(['/login?returnUrl=%2Fstudents%2F5']),
+    );
   });
 
   it('401 from /api/auth/login or /api/auth/me → passes through untouched', async () => {

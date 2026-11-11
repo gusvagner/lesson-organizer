@@ -120,7 +120,7 @@ Top `mat-toolbar` inside the shell: app name, "Lesson plans", "Students", and a 
 | 400 with field errors | Messages under the matching form fields (`server-errors.ts`), plus a general message for unknown fields |
 | 404 | Snackbar "Not found"; go back to the list |
 | 409 | Snackbar with the server's message (e.g. student has lesson plans); stay on the page |
-| 401 | Interceptor clears the user and goes to `/login?returnUrl=…` |
+| 401 | Interceptor does a full page load of `/login?returnUrl=…` (no snackbar), which drops every store like logout does |
 | 0 / 5xx | Snackbar "Something went wrong. Try again." |
 
 ## Authentication
@@ -129,7 +129,7 @@ Top `mat-toolbar` inside the shell: app name, "Lesson plans", "Students", and a 
 - On app start, an initializer calls `GET /api/auth/csrf` (sets the `XSRF-TOKEN` cookie) and then `GET /api/auth/me` to restore the session. 401 there means "not logged in", not an error.
 - `HttpClient` sends the token as `X-XSRF-TOKEN` on unsafe requests (`withXsrfConfiguration`).
 - After login and after logout, the app calls `/api/auth/csrf` again, because antiforgery tokens are tied to the user.
-- Before every login and register, and after any 401, the app also calls `/api/auth/csrf`: a token issued while a session existed is refused once that session expires or ends in another tab.
+- Before every login and register the app also calls `/api/auth/csrf`, and after a 401 the full page load runs the startup initializer again: a token issued while a session existed is refused once that session expires or ends in another tab.
 - A 400 whose ProblemDetails `type` is `urn:lesson-organizer:problem:invalid-xsrf-token` means a stale token: the interceptor fetches a new one and retries the request once; a second failure is shown as the generic error.
 - Logout: `POST /api/auth/logout`, then a full page load of `/login`. This drops every store's state, so the next teacher never sees the previous teacher's data, not even for a moment.
 
@@ -159,7 +159,7 @@ Run with `npm test` (CLI default runner). Fakes are named classes (`FakeStudents
 |---|---|
 | Stores | load sets items and loading; create/update/remove call the API and report outcomes; status change replaces one item; `saving` toggles |
 | `authGuard`, `guestGuard` | redirects with `returnUrl`; logged-in users skip login |
-| `unauthorizedInterceptor` | 401 clears the user and navigates to login; other errors pass through |
+| `unauthorizedInterceptor` | 401 clears the user and reloads `/login?returnUrl=…`; auth endpoints and other errors pass through |
 | `server-errors.ts`, `lesson-date.ts`, label pipes | field mapping; date conversion without day shifts; labels |
 | Student form, lesson plan form | required and length messages; submit disabled while saving; server field errors shown; student preselected from `?studentId=` |
 | Lesson plan list page | filters written to and read from the URL; empty states; inline status change disabled while saving |

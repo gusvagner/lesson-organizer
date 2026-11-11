@@ -5,7 +5,10 @@ import { ApiProblem } from '../http/api-problem';
 const GENERIC_FAILURE = 'Something went wrong. Try again.';
 const DURATION_MS = 4000;
 
-export function failureMessage(problem: ApiProblem): string {
+export function failureMessage(problem: ApiProblem): string | null {
+  if (problem.status === 401) {
+    return null;
+  }
   if (problem.status === 404) {
     return 'Not found';
   }
@@ -24,6 +27,9 @@ export class Feedback {
   }
 
   failure(problem: ApiProblem): void {
-    this.snackBar.open(failureMessage(problem), 'Close', { duration: DURATION_MS });
+    const message = failureMessage(problem);
+    if (message !== null) {
+      this.snackBar.open(message, 'Close', { duration: DURATION_MS });
+    }
   }
 }

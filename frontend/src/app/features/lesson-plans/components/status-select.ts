@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { MatSelectModule } from '@angular/material/select';
+import { ChangeDetectionStrategy, Component, input, output, viewChild } from '@angular/core';
+import { MatSelect, MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { LessonPlanStatusLabel } from '../../../shared/labels/lesson-plan-status-label';
 import { LESSON_PLAN_STATUSES, LessonPlanStatus } from '../lesson-plan.model';
 
@@ -9,10 +9,10 @@ import { LESSON_PLAN_STATUSES, LessonPlanStatus } from '../lesson-plan.model';
   template: `
     <mat-select
       class="status-select"
-      aria-label="Status"
+      [aria-label]="label()"
       [value]="status()"
       [disabled]="disabled()"
-      (selectionChange)="statusChange.emit($event.value)"
+      (selectionChange)="choose($event)"
     >
       @for (option of statuses; track option) {
         <mat-option [value]="option">{{ option | lessonPlanStatusLabel }}</mat-option>
@@ -30,6 +30,13 @@ import { LESSON_PLAN_STATUSES, LessonPlanStatus } from '../lesson-plan.model';
 export class StatusSelect {
   readonly status = input.required<LessonPlanStatus>();
   readonly disabled = input(false);
+  readonly label = input('Status');
   readonly statusChange = output<LessonPlanStatus>();
   protected readonly statuses = LESSON_PLAN_STATUSES;
+  private readonly select = viewChild.required(MatSelect);
+
+  protected choose(change: MatSelectChange<LessonPlanStatus>): void {
+    this.select().value = this.status();
+    this.statusChange.emit(change.value);
+  }
 }

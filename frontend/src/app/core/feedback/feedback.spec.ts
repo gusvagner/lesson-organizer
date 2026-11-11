@@ -24,6 +24,10 @@ describe('failureMessage', () => {
     expect(failureMessage(problem(0, null))).toBe('Something went wrong. Try again.');
   });
 
+  it('401 → no message (the session-loss reload handles it)', () => {
+    expect(failureMessage(problem(401, null))).toBeNull();
+  });
+
   it('400 without detail → "Please check the form."', () => {
     expect(failureMessage(problem(400, null))).toBe('Please check the form.');
   });

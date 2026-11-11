@@ -22,7 +22,7 @@
       [plan]="plan()"
       [students]="studentsStore.students()"
       [preselectedStudentId]="preselectedStudentId()"
-      [saving]="store.saving()"
+      [saving]="submission.active()"
       [problem]="problem()"
       (save)="save($event)"
     />

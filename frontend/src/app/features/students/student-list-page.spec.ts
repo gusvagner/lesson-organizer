@@ -87,6 +87,27 @@ describe('StudentListPage', () => {
     expect(textOf(root)).not.toContain('ana@example.com');
   });
 
+  it('pause after "Mary " then keep typing → box keeps the space', async () => {
+    const root = await open('/students');
+    typeInto(root, 'input.search', 'Mary ');
+    await settle(350);
+    await harness.fixture.whenStable();
+    expect(root.querySelector<HTMLInputElement>('input.search')!.value).toBe('Mary ');
+  });
+
+  it('search, Clear filters, same search again → search applied again', async () => {
+    const root = await open('/students');
+    typeInto(root, 'input.search', 'zzz');
+    await settle(350);
+    await harness.fixture.whenStable();
+    click(root, 'lo-empty-state button');
+    await settle();
+    await harness.fixture.whenStable();
+    typeInto(root, 'input.search', 'zzz');
+    await settle(350);
+    expect(TestBed.inject(Router).url).toBe('/students?search=zzz');
+  });
+
   it('delete cancelled → nothing removed', async () => {
     pageFakes().confirmation.answer = false;
     const root = await open('/students');

@@ -15,7 +15,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime } from 'rxjs';
 import { Feedback } from '../../core/feedback/feedback';
 import { Viewport } from '../../core/layout/viewport';
 import { EmptyState } from '../../shared/empty-state/empty-state';
@@ -62,12 +62,14 @@ export class StudentListPage {
     effect(() => {
       const term = this.searchTerm();
       untracked(() => {
-        this.searchBox.setValue(term, { emitEvent: false });
+        if (term !== this.searchBox.value.trim()) {
+          this.searchBox.setValue(term, { emitEvent: false });
+        }
         void this.load();
       });
     });
     this.searchBox.valueChanges
-      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed())
+      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed())
       .subscribe((value) => this.applySearch(value));
   }
 

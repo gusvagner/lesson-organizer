@@ -41,6 +41,7 @@ import { StatusSelect } from './status-select';
         <td mat-cell *matCellDef="let plan">
           <lo-status-select
             [status]="plan.status"
+            [label]="'Status of ' + plan.title"
             [disabled]="saving()"
             (statusChange)="statusChange.emit({ id: plan.id, status: $event })"
           />
