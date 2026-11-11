@@ -19,7 +19,7 @@ import { StatusSelect } from './status-select';
     StatusSelect,
   ],
   template: `
-    <table mat-table [dataSource]="plans()">
+    <table mat-table [dataSource]="plans()" [trackBy]="byId">
       <ng-container matColumnDef="title">
         <th mat-header-cell *matHeaderCellDef>Title</th>
         <td mat-cell *matCellDef="let plan">
@@ -74,6 +74,8 @@ export class LessonPlanTable {
   readonly showStudent = input(true);
   readonly statusChange = output<StatusChange>();
   readonly remove = output<LessonPlanResponse>();
+
+  protected readonly byId = (_index: number, plan: LessonPlanResponse) => plan.id;
 
   protected readonly columns = computed(() =>
     this.showStudent()

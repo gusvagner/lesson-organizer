@@ -1,0 +1,57 @@
+<header class="page-header">
+  <h1>Lesson plans</h1>
+  @if (hasStudents()) {
+    <a mat-flat-button routerLink="/lesson-plans/new">
+      <mat-icon>add</mat-icon>
+      New lesson plan
+    </a>
+  }
+</header>
+
+@if (loaded()) {
+  @if (!hasStudents()) {
+    <lo-empty-state
+      icon="person_add"
+      message="Create a student first. Every lesson plan belongs to a student."
+      actionLabel="Create a student first"
+      (action)="goTo('/students/new')"
+    />
+  } @else {
+    <lo-lesson-plan-filters
+      [students]="studentsStore.students()"
+      [filter]="filter()"
+      (filterChange)="applyFilter($event)"
+    />
+    @if (store.plans().length === 0) {
+      @if (filtered()) {
+        <lo-empty-state
+          icon="search_off"
+          message="No results"
+          actionLabel="Clear filters"
+          (action)="clearFilters()"
+        />
+      } @else {
+        <lo-empty-state
+          icon="event_note"
+          message="No lesson plans yet"
+          actionLabel="New lesson plan"
+          (action)="goTo('/lesson-plans/new')"
+        />
+      }
+    } @else if (viewport.handset()) {
+      <lo-lesson-plan-cards
+        [plans]="store.plans()"
+        [saving]="store.saving()"
+        (statusChange)="changeStatus($event)"
+        (remove)="remove($event)"
+      />
+    } @else {
+      <lo-lesson-plan-table
+        [plans]="store.plans()"
+        [saving]="store.saving()"
+        (statusChange)="changeStatus($event)"
+        (remove)="remove($event)"
+      />
+    }
+  }
+}
