@@ -17,7 +17,7 @@
 - SDK `10.0.403` in `global.json` with `rollForward: latestFeature`; `TargetFramework` `net10.0` only in `Directory.Build.props`.
 - `Nullable` enable, `ImplicitUsings` enable, `TreatWarningsAsErrors` true, `AnalysisLevel` latest-recommended, `EnforceCodeStyleInBuild` true.
 - Packages only from `docs/stack.md`: `xunit.v3`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, `coverlet.collector` (Task 1); `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.AspNetCore.Identity.EntityFrameworkCore`, `Microsoft.EntityFrameworkCore.Design`, `Testcontainers.MsSql` and the `dotnet-ef` tool (Task 7). EF Core, Identity and `dotnet-ef` on 10.0.x. Versions only in `Directory.Packages.props` (tool: `.config/dotnet-tools.json`).
-- **Never query a package repository** (Stallos feed, nuget.org) or image registry to find versions. Use the local NuGet cache or ask the human. Pulling the SQL Server image is done or approved by the human.
+- **Never query a package repository** (private feeds, nuget.org) or image registry to find versions. Use the local NuGet cache or ask the human. Pulling the SQL Server image is done or approved by the human.
 - Domain and Application reference no ASP.NET Core, Identity or EF Core. Domain references nothing; Application references Domain only.
 - No MediatR, AutoMapper, FluentValidation, generic repository, mocking library. Tests use named fakes; data-layer tests use the real SQL Server.
 - No connection string or password in committed files.
