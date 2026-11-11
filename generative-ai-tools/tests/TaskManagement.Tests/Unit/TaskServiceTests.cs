@@ -144,6 +144,18 @@ public sealed class TaskServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_TaskDeletedBetweenFindAndSave_ReturnsNotFound()
+    {
+        var task = SeedTaskOwnedBy(UserA);
+        _repository.DeleteAfterNextFind();
+
+        var result = await ServiceFor(UserA).UpdateAsync(
+            task.Id, new UpdateTaskRequest("Title", null, TaskItemStatus.Done, null), Cancellation);
+
+        Assert.IsType<TaskResult<TaskResponse>.NotFound>(result);
+    }
+
+    [Fact]
     public async Task UpdateAsync_MissingTask_ReturnsNotFound()
     {
         var result = await ServiceFor(UserA).UpdateAsync(

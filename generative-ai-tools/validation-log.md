@@ -74,3 +74,39 @@ The generating agent dispatched a fresh reviewer subagent, pasted its report as 
 | M | Two counts off by one in the log; `FixedClock` could advance | Fixed (counts; renamed `ManualClock`) | Agree |
 
 **Result:** part 2 accepted. To carry into part 4: the `sub`-without-user case (I2).
+
+## Part 3 — Persistence (2026-11-11, prompt v5)
+
+**Re-run by me:** `dotnet build` → 0 warnings, 0 errors; `dotnet format --verify-no-changes` → exit 0; `dotnet test` → 87 total, 0 failed (one SQL Server container from the local image). Matches the report. No part 4 file exists.
+
+**TDD evidence:** three reds, each for its reason — red 1 missing types (6 compile errors); red 2 no schema yet (21 × "Invalid object name 'Users'", the FK test got error 208 instead of 547); red 3 schema in place but repository stubbed (10 wrong results). Constraint tests assert SQL Server error numbers (2628, 547, 515, 2601), not just "an exception", because a missing table also throws — a detail that keeps the tests honest. The BOM that `dotnet ef` writes was caught by `dotnet format` and removed.
+
+**Schema read by me in `InitialCreate`:**
+
+| Table | What it has | Verdict |
+|---|---|---|
+| `Users` | `Id` uniqueidentifier PK; `Email` nvarchar(320) NOT NULL with a unique index; `Name` nvarchar(200) | OK — 320 is the longest valid email address; uniqueness ignores case under the default collation |
+| `Tasks` | `Id` PK **nonclustered**; `UserId` FK → `Users` (cascade); `Title` nvarchar(200) NOT NULL + `CK_Tasks_Title_NotBlank`; `Description` nvarchar(2000) NULL; `Status` nvarchar(20) (text); `DueDate` date NULL; `CreatedAt`/`UpdatedAt` datetimeoffset; clustered index `(UserId, CreatedAt)` | OK — matches the prompt; the check constraint and the clustering go beyond it |
+
+| # | Point | Verdict |
+|---|---|---|
+| 1 | Clustered on `(UserId, CreatedAt)`, random Guid PK nonclustered — every query is per user, so a user's rows sit together and inserts do not scatter; the clustered key also serves the FK | Agree; a sound answer to the question I handed over, with the rejected options in the log |
+| 2 | Every repository query goes through `OwnedBy(ownerId)`; delete is `ExecuteDelete` scoped to owner and id; `UpdateAsync` refuses a task of another owner (a programming error → exception) | OK |
+| 3 | List order: no-date last, then due date, creation time, id — deterministic | OK |
+| 4 | `System.Security.Cryptography.Pkcs` pinned to 10.0.13 after NU1902/NU1903 on the transitive 9.0.4 | Agree — the same vulnerable transitive package and the same pin as the Lesson Organizer; not a new dependency |
+| 5 | Cascade delete from `Users` to `Tasks` — not asked for | Accepted: there is no user endpoint; noted as an unprompted choice for the answer |
+| 6 | `dotnet-tools.json` at the folder root (the .NET 10 default), not `.config/` | OK |
+| 7 | Every test, unit tests included, needs Docker (one shared container) | Accepted trade-off of "one container per run" in the prompt |
+
+**The reviewer:** 0 Critical, 0 Important, 4 Minor. It agreed with the clustering and the pin.
+
+| # | Reviewer finding | Agent's decision | My verdict |
+|---|---|---|---|
+| 1 | The database enforced only the maximum title length | Fixed test-first: `CK_Tasks_Title_NotBlank`, tested by error number **and** constraint name (547 is also the FK error); `InitialCreate` regenerated since it was not committed; gap noted (tabs/line breaks pass in SQL, the validator rejects them) | Agree, including regenerating instead of stacking a migration |
+| 2 | A task deleted between find and update threw (a 500 in part 4) | Fixed test-first in parts 2 and 3: `UpdateAsync` returns false, the service maps it to not found; integration test with two contexts and a unit test where the fake deletes in between | Agree; to confirm as a 404 over HTTP in part 4 |
+| 3 | Unit tests also need Docker | Declined (prompt asks for one container per run, one test project) | Agree |
+| 4 | `dotnet ef` uses a placeholder connection string | Deferred to part 4 | Agree |
+
+**Carried to part 4:** the `sub`-without-user case (part 2 I2 — now a 547 from the FK, so a 500 without a fix), the PUT/DELETE race as a 404, and the design-time connection string. **Open for me:** every new migration will have the BOM again; an `.editorconfig` section for `Migrations/*.cs` would settle it.
+
+**Result:** part 3 accepted.

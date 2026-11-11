@@ -8,7 +8,7 @@ public interface ITaskRepository
 
     Task AddAsync(TaskItem task, CancellationToken cancellationToken);
 
-    Task UpdateAsync(Guid ownerId, TaskItem task, CancellationToken cancellationToken);
+    Task<bool> UpdateAsync(Guid ownerId, TaskItem task, CancellationToken cancellationToken);
 
     Task<bool> DeleteAsync(Guid ownerId, Guid taskId, CancellationToken cancellationToken);
 }

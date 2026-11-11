@@ -57,8 +57,10 @@ public sealed class TaskService(ITaskRepository repository, ICurrentUser current
         }
 
         task.Replace(request.Title!, request.Description, request.Status!.Value, request.DueDate, timeProvider.GetUtcNow());
-        await repository.UpdateAsync(currentUser.UserId, task, cancellationToken);
-        return new TaskResult<TaskResponse>.Success(ToResponse(task));
+        var saved = await repository.UpdateAsync(currentUser.UserId, task, cancellationToken);
+        return saved
+            ? new TaskResult<TaskResponse>.Success(ToResponse(task))
+            : new TaskResult<TaskResponse>.NotFound();
     }
 
     public async Task<TaskResult<Guid>> DeleteAsync(Guid taskId, CancellationToken cancellationToken)

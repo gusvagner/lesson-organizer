@@ -12,10 +12,23 @@ public sealed class FakeTaskRepository : ITaskRepository
 
     public List<RecordedUpdate> Updates { get; } = [];
 
+    private bool _deleteAfterNextFind;
+
     public void Seed(params TaskItem[] tasks) => _tasks.AddRange(tasks);
 
-    public Task<TaskItem?> FindAsync(Guid ownerId, Guid taskId, CancellationToken cancellationToken) =>
-        Task.FromResult(_tasks.SingleOrDefault(task => task.Id == taskId && task.UserId == ownerId));
+    public void DeleteAfterNextFind() => _deleteAfterNextFind = true;
+
+    public Task<TaskItem?> FindAsync(Guid ownerId, Guid taskId, CancellationToken cancellationToken)
+    {
+        var found = _tasks.SingleOrDefault(task => task.Id == taskId && task.UserId == ownerId);
+        if (_deleteAfterNextFind && found is not null)
+        {
+            _deleteAfterNextFind = false;
+            _tasks.Remove(found);
+        }
+
+        return Task.FromResult(found);
+    }
 
     public Task<TaskPage> ListAsync(
         Guid ownerId, TaskItemStatus? status, int page, int pageSize, CancellationToken cancellationToken)
@@ -32,7 +45,7 @@ public sealed class FakeTaskRepository : ITaskRepository
         return Task.CompletedTask;
     }
 
-    public Task UpdateAsync(Guid ownerId, TaskItem task, CancellationToken cancellationToken)
+    public Task<bool> UpdateAsync(Guid ownerId, TaskItem task, CancellationToken cancellationToken)
     {
         if (task.UserId != ownerId)
         {
@@ -41,7 +54,7 @@ public sealed class FakeTaskRepository : ITaskRepository
         }
 
         Updates.Add(new RecordedUpdate(ownerId, task.Id, task.Title, task.UpdatedAt));
-        return Task.CompletedTask;
+        return Task.FromResult(_tasks.Contains(task));
     }
 
     public Task<bool> DeleteAsync(Guid ownerId, Guid taskId, CancellationToken cancellationToken) =>

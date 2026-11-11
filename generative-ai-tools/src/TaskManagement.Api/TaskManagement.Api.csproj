@@ -4,4 +4,9 @@
     <UserSecretsId>3f6c2d8e-9a41-4b7e-8c15-2e7d0a9b6f43</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
 </Project>
