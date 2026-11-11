@@ -41,12 +41,14 @@ public sealed class DemoDataSeederTests(SqlServerFixture sql) : IAsyncLifetime
         Assert.True(await SeedAsync());
         await using var context = _db.NewContext();
         Assert.Equal(2, await context.Users.CountAsync(Ct));
-        Assert.Equal(5, await context.Students.CountAsync(Ct));
+        Assert.Equal(7, await context.Students.CountAsync(Ct));
         var plans = await context.LessonPlans.OrderBy(plan => plan.LessonDate).ToListAsync(Ct);
-        Assert.Equal(new DateOnly(2026, 11, 3), plans[0].LessonDate);
+        Assert.Equal(new DateOnly(2026, 10, 31), plans[0].LessonDate);
         Assert.Equal(
-            [LessonPlanStatus.ToPrepare, LessonPlanStatus.ToPrepare, LessonPlanStatus.Ready, LessonPlanStatus.Ready, LessonPlanStatus.Delivered, LessonPlanStatus.Delivered],
-            plans.Select(plan => plan.Status).Order());
+            (4, 3, 4),
+            (plans.Count(plan => plan.Status == LessonPlanStatus.ToPrepare),
+             plans.Count(plan => plan.Status == LessonPlanStatus.Ready),
+             plans.Count(plan => plan.Status == LessonPlanStatus.Delivered)));
     }
 
     [Fact]
@@ -54,7 +56,7 @@ public sealed class DemoDataSeederTests(SqlServerFixture sql) : IAsyncLifetime
     {
         await SeedAsync();
         await using var context = _db.NewContext();
-        var ana = await context.Students.SingleAsync(student => student.Name == "Ana", Ct);
+        var ana = await context.Students.SingleAsync(student => student.Name == "Ana Souza", Ct);
         var plans = await context.LessonPlans.Where(plan => plan.StudentId == ana.Id).OrderBy(plan => plan.LessonDate).ToListAsync(Ct);
         Assert.Equal(
             [("Present perfect — conversation", LessonPlanStatus.Delivered, new DateOnly(2026, 11, 3)), ("Phrasal verbs at work", LessonPlanStatus.Ready, new DateOnly(2026, 11, 12))],
@@ -67,7 +69,7 @@ public sealed class DemoDataSeederTests(SqlServerFixture sql) : IAsyncLifetime
         await SeedAsync();
         Assert.False(await SeedAsync());
         await using var context = _db.NewContext();
-        Assert.Equal((2, 5, 6), (await context.Users.CountAsync(Ct), await context.Students.CountAsync(Ct), await context.LessonPlans.CountAsync(Ct)));
+        Assert.Equal((2, 7, 11), (await context.Users.CountAsync(Ct), await context.Students.CountAsync(Ct), await context.LessonPlans.CountAsync(Ct)));
     }
 
     [Fact]
@@ -94,8 +96,34 @@ public sealed class DemoDataSeederTests(SqlServerFixture sql) : IAsyncLifetime
     {
         await SeedAsync();
         await using var context = _db.NewContext();
-        var carla = await context.Students.SingleAsync(student => student.Name == "Carla", Ct);
+        var carla = await context.Students.SingleAsync(student => student.Name == "Carla Mendes", Ct);
         Assert.False(await context.LessonPlans.AnyAsync(plan => plan.StudentId == carla.Id, Ct));
+    }
+
+    [Fact]
+    public async Task Seed_MariaHasFiveStudentsWithEmailAndNotes()
+    {
+        await SeedAsync();
+        await using var context = _db.NewContext();
+        var mariaId = await context.Users.Where(user => user.Email == "maria@example.com").Select(user => user.Id).SingleAsync(Ct);
+        var students = await context.Students.Where(student => student.TeacherId == mariaId).OrderBy(student => student.Name).ToListAsync(Ct);
+        Assert.Equal(
+            ["Ana Souza", "Bruno Lima", "Carla Mendes", "Diego Alves", "Fernanda Rocha"],
+            students.Select(student => student.Name));
+        Assert.All(students, student => Assert.False(string.IsNullOrWhiteSpace(student.Email)));
+        Assert.All(students, student => Assert.False(string.IsNullOrWhiteSpace(student.Notes)));
+    }
+
+    [Fact]
+    public async Task Seed_EveryMariaPlanHasDescription()
+    {
+        await SeedAsync();
+        await using var context = _db.NewContext();
+        var mariaId = await context.Users.Where(user => user.Email == "maria@example.com").Select(user => user.Id).SingleAsync(Ct);
+        var mariaStudentIds = await context.Students.Where(student => student.TeacherId == mariaId).Select(student => student.Id).ToListAsync(Ct);
+        var plans = await context.LessonPlans.Where(plan => mariaStudentIds.Contains(plan.StudentId)).ToListAsync(Ct);
+        Assert.Equal(8, plans.Count);
+        Assert.All(plans, plan => Assert.False(string.IsNullOrWhiteSpace(plan.Description)));
     }
 
     private async Task<bool> SeedAsync()
