@@ -17,10 +17,12 @@ else
     app.UseExceptionHandler();
 }
 
+app.UseSpaStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapSpaFallback();
 
 await DatabaseStartup.MigrateIfConfiguredAsync(app);
 await app.RunAsync();
