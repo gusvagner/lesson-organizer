@@ -45,6 +45,11 @@ describe('LoginPage', () => {
     expect(TestBed.inject(Router).url).toBe('/students/1');
   });
 
+  it('valid login on /login with no returnUrl → navigates to /lesson-plans', async () => {
+    await logIn('/login');
+    expect(TestBed.inject(Router).url).toBe('/lesson-plans');
+  });
+
   it('valid login with returnUrl=//evil.example → navigates to /lesson-plans', async () => {
     await logIn('/login?returnUrl=%2F%2Fevil.example');
     expect(TestBed.inject(Router).url).toBe('/lesson-plans');

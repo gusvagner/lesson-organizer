@@ -57,7 +57,7 @@ Exact versions are pinned in `Directory.Packages.props` when each package is add
 | Package | Used by | Why |
 |---|---|---|
 | `xunit.v3` 4.0.1 | all test projects (via `tests/Directory.Build.props`) | Test framework; each test project is an executable on Microsoft Testing Platform, so no `Microsoft.NET.Test.Sdk` or `xunit.runner.visualstudio`. |
-| Coverage extension for MTP (`Microsoft.Testing.Extensions.CodeCoverage`, version to be given by the human) | all test projects | The exercise asks for "sufficient test coverage". `coverlet.collector` works only with VSTest; the cached `Microsoft.Testing.Extensions.CodeCoverage` 18.0.4 crashes on the MTP 2.4 used by xUnit v3 4.0.1 (`TypeLoadException` on `OnTestSessionStartingAsync`). Added before the coverage step of plan 1, Task 8. |
+| `Microsoft.Testing.Extensions.CodeCoverage` 18.11.2 | all test projects (via `tests/Directory.Build.props`) | The exercise asks for "sufficient test coverage". `coverlet.collector` works only with VSTest. 18.0.4 crashed (`TypeLoadException`) because it targets Microsoft.Testing.Platform 1.8.4; 18.11.2 depends on MTP 2.4.0, the version xUnit v3 4.0.1 uses (looked up on nuget.org with the human's approval, 2026-11-10). Settings in `coverage.settings.xml` (project modules only, migrations excluded); `tools/coverage-summary.mjs` merges the per-project Cobertura files. |
 | `Microsoft.AspNetCore.Mvc.Testing` 10.0.9 | `Api.IntegrationTests` | `WebApplicationFactory`: runs the real API in memory for HTTP tests. |
 | `Microsoft.EntityFrameworkCore.SqlServer` 10.0.9 | `Infrastructure` | EF Core and its SQL Server provider: the data access layer ([ADR 0003](decisions/0003-sql-server-ef-core-docker.md)). |
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10.0.9 | `Infrastructure` | Identity's EF Core stores: users table, password hashing, lockout, security stamp. |
@@ -103,13 +103,13 @@ Two containers in `docker-compose.yml` at the repository root ([ADR 0003](decisi
 | Service | Image | Ports | Volumes | Notes |
 |---|---|---|---|---|
 | `db` | `mcr.microsoft.com/mssql/server:2022-latest` (pulled 2026-11-10, digest `sha256:11927f5e…`) | `127.0.0.1:1433:1433` | `mssql-data` → `/var/opt/mssql` | `ACCEPT_EULA=Y`, `MSSQL_PID=Developer`, `MSSQL_SA_PASSWORD` from `.env`. Health check with `sqlcmd` (`/opt/mssql-tools18/bin/sqlcmd -C`). |
-| `app` | built from `Dockerfile` | `127.0.0.1:8080:8080` | `dp-keys` → data protection keys folder | Waits for `db` to be healthy. Environment: connection string from `.env`, `Database__MigrateOnStartup=true`, `Seed__DemoData=true`. Runs as the image's non-root `app` user. |
+| `app` | built from `Dockerfile` (image about 377 MB) | `127.0.0.1:8080:8080` | `dp-keys` → `/home/app/keys` (data protection keys) | Waits for `db` to be healthy. Environment: `ASPNETCORE_ENVIRONMENT=Production`, connection string to `db` with the `.env` password, `Database__MigrateOnStartup=true`, `Seed__DemoData=true`, `DataProtection__KeysPath=/home/app/keys`. Runs as the image's non-root user (`$APP_UID`). The API serves the Angular files from `wwwroot`; unknown non-API paths return `index.html`. |
 
 `Dockerfile` (multi-stage):
 
 | Stage | Base image | Does |
 |---|---|---|
-| `frontend` | `node` (the LTS line from `frontend/.nvmrc`) | `npm ci`, `npm run build` |
+| `frontend` | `node:26-alpine` (matches `frontend/.nvmrc`) | `npm ci`, `npm run build` |
 | `backend` | `mcr.microsoft.com/dotnet/sdk:10.0` | `dotnet restore`, `dotnet publish src/LessonOrganizer.Api -c Release` |
 | final | `mcr.microsoft.com/dotnet/aspnet:10.0` | Published API plus the Angular `browser/` output in `wwwroot`; listens on 8080 |
 
@@ -128,7 +128,8 @@ Filled in at stage 0, once the solution exists, and copied to `CLAUDE.md` and th
 | Build | `dotnet build` |
 | All tests (Docker running) | `dotnet test` (MTP; exit code 8 means zero tests ran) |
 | Unit tests only, without Docker | `dotnet test --filter "FullyQualifiedName!~Infrastructure.Tests&FullyQualifiedName!~IntegrationTests"` |
-| Coverage (once the coverage extension is added) | `dotnet test --coverage --coverage-output-format cobertura` |
+| Coverage (backend) | `dotnet test --coverage --coverage-output-format cobertura --coverage-settings coverage.settings.xml`, then `node tools/coverage-summary.mjs` |
+| Coverage (frontend) | `cd frontend && npx ng test --watch=false --coverage` (`@vitest/coverage-v8`; HTML in `frontend/coverage/`) |
 | Restore local tools | `dotnet tool restore` |
 | Add a migration | `dotnet ef migrations add <Name> --project src/LessonOrganizer.Infrastructure --output-dir Persistence/Migrations` |
 | Apply migrations by hand (the app applies them at startup when `Database:MigrateOnStartup` is true) | `dotnet ef database update --project src/LessonOrganizer.Infrastructure` with `ConnectionStrings__LessonOrganizer` set |
@@ -179,7 +180,7 @@ Verified on 2026-11-10 with `npx ng version` after `npx @angular/cli@22 new` (np
 
 ### UI components
 
-**Angular Material 22** (with Angular CDK 22), added with `ng add @angular/material` at stage 9. Material 3 theme generated from the DESIGN.md primary color (`ng generate @angular/material:theme-color`), light and dark from the system setting plus a toolbar toggle. See [ADR 0002](decisions/0002-angular-material.md) and [DESIGN.md](../DESIGN.md).
+**Angular Material 22** (with Angular CDK 22), added with `ng add @angular/material` at stage 9. Material 3 theme generated from the design.md primary color (`ng generate @angular/material:theme-color`), light and dark from the system setting plus a toolbar toggle. See [ADR 0002](decisions/0002-angular-material.md) and [design.md](design.md).
 
 Fonts and icons are bundled from npm, nothing loads from a CDN: `@fontsource-variable/inter` (Inter Variable) and `material-icons` (Material Icons Round, a 174 KB static font; the variable Material Symbols font was 5.4 MB). Added on 2026-11-10 with the human's approval.
 

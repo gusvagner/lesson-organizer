@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Feedback } from '../../core/feedback/feedback';
 import { Confirmation } from '../../shared/confirm-dialog/confirmation';
-import { StudentResponse } from './student.model';
+import { HAS_LESSON_PLANS_MESSAGE, StudentResponse } from './student.model';
 import { StudentsStore } from './students-store';
 
 @Injectable({ providedIn: 'root' })
@@ -11,6 +11,10 @@ export class StudentActions {
   private readonly confirmation = inject(Confirmation);
 
   async remove(student: StudentResponse): Promise<boolean> {
+    if (student.lessonPlanCount > 0) {
+      this.feedback.inform(HAS_LESSON_PLANS_MESSAGE);
+      return false;
+    }
     const confirmed = await this.confirmation.ask({
       title: 'Delete student?',
       message: `Delete ${student.name}? This cannot be undone.`,

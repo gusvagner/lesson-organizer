@@ -76,7 +76,7 @@ public sealed class AuthEndpointsTests(SqlServerFixture sql) : IAsyncLifetime
     {
         var client = await ApiClient.CreateAsync(_factory);
         await client.RegisterAsync("Maria", "maria@example.com", Password);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await client.Http.GetAsync("/api/auth/me", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.Http.GetAsync("/api/auth/me", Ct)).StatusCode);
     }
 
     [Fact]
@@ -88,11 +88,11 @@ public sealed class AuthEndpointsTests(SqlServerFixture sql) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Me_WithoutSession_Returns401NotRedirect()
+    public async Task Me_WithoutSession_Returns204NotRedirect()
     {
         var client = await ApiClient.CreateAsync(_factory);
         var response = await client.Http.GetAsync("/api/auth/me", Ct);
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Null(response.Headers.Location);
     }
 
@@ -106,11 +106,11 @@ public sealed class AuthEndpointsTests(SqlServerFixture sql) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Me_AfterLogout_Returns401()
+    public async Task Me_AfterLogout_Returns204()
     {
         var client = await ApiClient.LoggedInAsync(_factory, "maria@example.com");
         Assert.Equal(HttpStatusCode.NoContent, (await client.LogoutAsync()).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await client.Http.GetAsync("/api/auth/me", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.Http.GetAsync("/api/auth/me", Ct)).StatusCode);
     }
 
     [Fact]

@@ -67,13 +67,29 @@ describe('StudentListPage', () => {
     expect(TestBed.inject(Router).url).toBe('/students');
   });
 
-  it('delete confirmed with 409 → server message, list unchanged', async () => {
+  it('delete a student with lesson plans → explained at once, no confirmation and no request', async () => {
     pageFakes().students.students[0].lessonPlanCount = 1;
     const root = await open('/students');
     click(root, 'button.delete-student');
     await settle();
     await harness.fixture.whenStable();
     expect(pageFakes().feedback.messages).toEqual([HAS_LESSON_PLANS]);
+    expect(pageFakes().confirmation.asked).toEqual([]);
+    expect(pageFakes().students.responder.calls).not.toContain('remove');
+    expect(textOf(root)).toContain('Ana');
+  });
+
+  it('count out of date (0 on screen, plans on the server) → server 409 message, list unchanged', async () => {
+    const root = await open('/students');
+    const fake = pageFakes().students;
+    fake.students = fake.students.map((student) =>
+      student.id === 's1' ? { ...student, lessonPlanCount: 1 } : student,
+    );
+    click(root, 'button.delete-student');
+    await settle();
+    await harness.fixture.whenStable();
+    expect(pageFakes().feedback.messages).toEqual([HAS_LESSON_PLANS]);
+    expect(fake.responder.calls).toContain('remove');
     expect(textOf(root)).toContain('Ana');
   });
 

@@ -74,6 +74,14 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public async Task Me_NoSession_Returns204()
+    {
+        _session.IsSignedIn = false;
+        var result = await Controller().Me(Ct);
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
     public async Task Me_UserGone_Returns401()
     {
         var result = await Controller(Guid.CreateVersion7()).Me(Ct);

@@ -64,8 +64,14 @@ public sealed class AuthController(AuthService auth, IAuthSession session, ICurr
     }
 
     [HttpGet("me")]
+    [AllowAnonymous]
     public async Task<IActionResult> Me(CancellationToken ct)
     {
+        if (!session.IsSignedIn)
+        {
+            return NoContent();
+        }
+
         var result = await auth.GetAsync(currentTeacher.Id, ct);
         return result.IsSuccess
             ? new OkObjectResult(result.Value)

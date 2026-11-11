@@ -25,7 +25,7 @@ export class AuthApi {
     return this.http.post<void>(`${BASE_URL}/logout`, null);
   }
 
-  me(): Observable<User> {
-    return this.http.get<User>(`${BASE_URL}/me`);
+  me(): Observable<User | null> {
+    return this.http.get<User | null>(`${BASE_URL}/me`);
   }
 }

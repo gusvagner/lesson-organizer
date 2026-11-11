@@ -17,6 +17,13 @@ describe('AuthApi', () => {
 
   afterEach(() => http.verify());
 
+  it('me with 204 → emits null', () => {
+    let user: unknown = 'not set';
+    api.me().subscribe((value) => (user = value));
+    http.expectOne('/api/auth/me').flush(null, { status: 204, statusText: 'No Content' });
+    expect(user).toBeNull();
+  });
+
   it('csrf → GET /api/auth/csrf', () => {
     api.csrf().subscribe();
     expect(http.expectOne('/api/auth/csrf').request.method).toBe('GET');

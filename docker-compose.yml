@@ -18,5 +18,22 @@ services:
       retries: 10
       start_period: 20s
 
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__LessonOrganizer: "Server=db,1433;Database=LessonOrganizer;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true"
+      Database__MigrateOnStartup: "true"
+      Seed__DemoData: "true"
+      DataProtection__KeysPath: /home/app/keys
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - dp-keys:/home/app/keys
+
 volumes:
   mssql-data:
+  dp-keys:

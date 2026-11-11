@@ -37,6 +37,13 @@ describe('AuthStore', () => {
     expect(store.currentUser()?.name).toBe('Maria');
   });
 
+  it('restoreSession with no session (204, no body) → null user', async () => {
+    fakeAuthApi().sessionUser = null;
+    await store.restoreSession();
+    expect(store.currentUser()).toBeNull();
+    expect(store.isLoggedIn()).toBe(false);
+  });
+
   it('restoreSession 401 → null user, no throw', async () => {
     fakeAuthApi().fail('me', 401);
     await store.restoreSession();

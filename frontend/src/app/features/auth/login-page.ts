@@ -31,8 +31,8 @@ export class LoginPage {
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthStore);
 
-  readonly returnUrl = input<string | null>(null);
-  readonly registered = input<string | null>(null);
+  readonly returnUrl = input<string | undefined>();
+  readonly registered = input<string | undefined>();
 
   protected readonly failure = signal<string | null>(null);
   protected readonly fieldError = fieldErrorMessage;

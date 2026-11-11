@@ -8,6 +8,8 @@ public sealed class RecordingAuthSession : IAuthSession
 
     public bool SignedOut { get; private set; }
 
+    public bool IsSignedIn { get; set; } = true;
+
     public Task SignInAsync(Guid userId)
     {
         SignedInUserId = userId;

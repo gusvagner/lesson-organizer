@@ -151,7 +151,7 @@ All JSON. Enums serialized as strings. Errors use RFC 9457 ProblemDetails.
 | POST | `/api/auth/register` | public | `{ name, email, password }` | 201 `UserResponse` (no session started) · 400 validation/weak password · 409 email taken |
 | POST | `/api/auth/login` | public | `{ email, password }` | 200 `UserResponse` · 401 invalid credentials or locked out · 429 rate limited |
 | POST | `/api/auth/logout` | required | — | 204 |
-| GET | `/api/auth/me` | required | — | 200 `UserResponse` · 401 |
+| GET | `/api/auth/me` | public | — | 200 `UserResponse` · 204 no session (not an error, so the browser console stays clean) · 401 session of a user that no longer exists |
 
 `UserResponse = { id, name, email }`
 
@@ -192,7 +192,7 @@ Student details page reuses `GET /api/lesson-plans?studentId={id}`; no nested en
 - The stored user has a password hash, never the plain password.
 - Valid login returns 200 and sets an `HttpOnly` cookie; wrong password returns 401 with a generic message.
 - Five wrong passwords lock the account for 15 minutes; a locked account gets the same 401 and message as a wrong password, even with the right password.
-- After logout, `GET /api/auth/me` returns 401.
+- After logout, `GET /api/auth/me` returns 204 (no session).
 - Every student and lesson plan endpoint returns 401 without a session.
 - An unsafe request without a valid XSRF token is rejected.
 
@@ -242,8 +242,9 @@ Detailed, task-by-task plans live in `docs/plans/`, each written just before it 
 2. [Backend API — stages 5–8](plans/2026-11-10-2-backend-api.md)
 3. [Frontend — stages 9–11](plans/2026-11-10-3-frontend.md)
 4. [UI refresh — design system, light/dark theme, lesson plan board](plans/2026-11-10-4-ui-refresh.md) (human request after stage 11)
-5. Delivery — stage 12
+5. [Delivery — stage 12](plans/2026-11-10-5-delivery.md) (the GenAI answer moved to plan 7 at the human's request)
 6. Security review — stage 13
+7. GenAI exercise answer (`docs/ai/genai-exercise.md`)
 
 | # | Stage | Done when |
 |---|---|---|

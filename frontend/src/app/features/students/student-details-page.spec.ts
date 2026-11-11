@@ -82,12 +82,13 @@ describe('StudentDetailsPage', () => {
     expect(pageFakes().plans.plans[0].status).toBe('Ready');
   });
 
-  it('delete student confirmed with plans → 409 message, stays', async () => {
+  it('delete student with plans → explained at once, no request, stays', async () => {
     pageFakes().students.students[0].lessonPlanCount = 1;
     const root = await open('/students/s1');
     click(root, 'button.delete-student');
     await settle();
     expect(pageFakes().feedback.messages[0]).toContain('This student has lesson plans');
+    expect(pageFakes().students.responder.calls).not.toContain('remove');
     expect(TestBed.inject(Router).url).toBe('/students/s1');
   });
 

@@ -10,6 +10,7 @@ describe('safeReturnUrl', () => {
     ['javascript:alert(1)', '/lesson-plans'],
     ['', '/lesson-plans'],
     [null, '/lesson-plans'],
+    [undefined, '/lesson-plans'],
   ])('%s → %s', (input, expected) => {
     expect(safeReturnUrl(input)).toBe(expected);
   });
