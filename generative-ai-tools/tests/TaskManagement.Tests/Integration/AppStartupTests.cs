@@ -8,14 +8,14 @@ namespace TaskManagement.Tests.Integration;
 public sealed class AppStartupTests
 {
     [Fact]
-    public async Task Start_WithValidJwtSettings_ServesHttpRequests()
+    public async Task Start_WithValidSettings_AnswersAnonymousRequestWith401()
     {
         await using var factory = new ApiFactory();
         using var client = factory.CreateClient();
 
         using var response = await client.GetAsync("/no-such-endpoint", TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -58,5 +58,17 @@ public sealed class AppStartupTests
         var exception = Assert.Throws<OptionsValidationException>(() => factory.Services);
 
         Assert.Contains("Jwt:Issuer", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Start_WithoutConnectionString_FailsOptionsValidation(string connectionString)
+    {
+        await using var factory = new ApiFactory(TestJwtSettings.With(ApiFactory.ConnectionStringKey, connectionString));
+
+        var exception = Assert.Throws<OptionsValidationException>(() => factory.Services);
+
+        Assert.Contains(ApiFactory.ConnectionStringKey, exception.Message);
     }
 }

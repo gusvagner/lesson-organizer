@@ -110,3 +110,35 @@ The generating agent dispatched a fresh reviewer subagent, pasted its report as 
 **Carried to part 4:** the `sub`-without-user case (part 2 I2 — now a 547 from the FK, so a 500 without a fix), the PUT/DELETE race as a 404, and the design-time connection string. **Open for me:** every new migration will have the BOM again; an `.editorconfig` section for `Migrations/*.cs` would settle it.
 
 **Result:** part 3 accepted.
+
+## Part 4 — HTTP and auth (2026-11-11, prompt v5)
+
+**Re-run by me:** `dotnet build` → 0 warnings, 0 errors; `dotnet format --verify-no-changes` → exit 0; `dotnet test` → 162 total, 0 failed (real SQL Server container). Matches the report. No part 5 file exists.
+
+**TDD evidence:** red 1 compile errors (missing types); red 2 62 of 148 failed, almost all "got 404" because nothing was wired. The agent logged two red failures that were its own test mistakes (EF rewrites connection strings, so comparing raw text was wrong) and three stumbles on the way to green (missing JwtBearer reference; `[Produces("application/json")]` turning problem responses into `application/json`; `ValidationProblem()` bypassing its camelCase formatter).
+
+**The three items carried from parts 2 and 3 — all closed, each with a test that failed first:**
+
+| Item | How it was closed | My verdict |
+|---|---|---|
+| Token whose `sub` is a Guid with no `Users` row (part 2 I2; a 547/500 since part 3) | `SubjectValidatingJwtEvents.TokenValidated` fails the token after the signature, issuer, audience and expiry checks → 401; tests on GET and POST, POST stores nothing | Agree: 401 is right — the token does not identify a known user. The check costs one query per request, uncached so a deleted user loses access at once |
+| Task deleted between find and update (part 3) | 404 end to end; a test-only repository deletes the row inside the request | Agree |
+| Design-time connection string (part 3 review) | `dotnet ef` reads user secrets or `ConnectionStrings__TaskManagement`; a never-connecting placeholder only when unset or blank; nothing secret committed | Agree; checked with `dotnet ef dbcontext info` by the agent |
+
+**Code read by me:**
+
+| # | Point | Verdict |
+|---|---|---|
+| 1 | Bearer: HS256 only, signed tokens with an expiry required, issuer/audience/key validated, 30 s skew, `MapInboundClaims = false`, `IncludeErrorDetails = false`, name claim `sub` | OK |
+| 2 | Fallback policy requires an authenticated user, plus `[Authorize]` on the controller — a new endpoint cannot be anonymous by accident | OK |
+| 3 | `CurrentUser` reads the id only from `sub`; the controller never touches the token or EF | OK |
+| 4 | The controller maps `TaskResult` → 200 / 201 + `Location` (`CreatedAtAction`) / 204 / 400 (ValidationProblemDetails, camelCase keys) / 404 (same ProblemDetails for missing and foreign); routes constrained to `{id:guid}` | OK |
+| 5 | A new `Http/` folder (strict enum converter and binder) not in the prompt's tree | Accepted — it holds what the prompt asks (reject unknown and numeric enum values); the tree did not foresee it |
+| 6 | `context.Fail(...)` messages include the token's `sub` value; not sent to the client (`IncludeErrorDetails = false`) but can reach the authentication log | Minor: a user-supplied value in a log line; acceptable here, noted for the answer |
+| 7 | The part 1 smoke test now expects 401 for an unknown path (fallback policy) | OK, logged by the agent |
+
+**The reviewer:** 0 Critical, 0 Important, 6 Minor; confirmed the three items closed. Decisions: enum binder limited to query and route values (fixed test-first); `IncludeErrorDetails` off in every environment (fixed test-first); a user deleted mid-request → clean 500 (declined: the API cannot delete users); blank design-time string falls back (fixed test-first); only an HTTP launch profile (deferred to part 5 as a note); log counts (fixed). I agree with each.
+
+**Real bug found because of the reviewer, by the agent:** the reviewer marked "comma-separated status" as *not verified*; the agent tested it and found that JSON `"status":"Todo, InProgress"` was accepted and stored as `InProgress` — `JsonStringEnumConverter` parses flags syntax even for a non-flags enum. Fixed test-first with a name-only converter shared with the query binder. This is the best example so far for the answer: a plausible line of AI-generated code with a subtle framework behaviour, caught only because "not verified" was treated as a question, not a pass.
+
+**Result:** part 4 accepted. Left for part 5: the HTTPS note and run instructions (user secrets for `Jwt:SigningKey` and the connection string; `dotnet ef database update`).

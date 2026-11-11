@@ -905,3 +905,445 @@ Resumo da execução de teste: Aprovado!
 ```
 
 Part 4 has not been started.
+
+## Part 4 — HTTP and auth
+
+### What was built
+
+**Composition (`Program.cs`, composition only):** `TimeProvider.System`, `AddJwtAuthentication()`, `AddPersistence()`, `AddTasks()`, `AddApiControllers()` and `AddApiProblemDetails()`. Then the middleware in order: `UseApiErrorHandling()` (the exception handler outside Development, then status-code pages), `UseAuthentication()`, `UseAuthorization()` and `MapControllers()`.
+
+**Auth (`Auth/`):**
+- `JwtSetup.AddJwtAuthentication()` registers:
+  - the validated `JwtOptions` from part 1, idempotent since the part 1 review;
+  - JWT bearer, configured from `JwtOptions` through `IOptions`, so the values come from configuration (user secrets in Development, in-memory settings in tests);
+  - a **fallback authorization policy** that requires an authenticated user, so every endpoint, including any future one and any unknown path, needs a token, and `[Authorize]` on the controller as well;
+  - `ICurrentUser` and `IHttpContextAccessor`.
+
+  The token rules:
+  - `ValidIssuer`, `ValidAudience` and the signing key come from `Jwt:*`.
+  - The only algorithm accepted is HS256 (`ValidAlgorithms`).
+  - The token must be signed and must have an expiry.
+  - The clock skew is 30 s (the default is 5 min).
+  - `MapInboundClaims = false`, so `sub` stays `sub` instead of becoming `ClaimTypes.NameIdentifier`.
+- `SubjectValidatingJwtEvents` (`JwtBearerEvents.TokenValidated`, resolved from DI through `EventsType`) runs after the signature, issuer, audience and lifetime checks pass:
+  - it fails authentication when `sub` is missing or not a Guid;
+  - it fails authentication when `sub` names no row in `Users`.
+
+  Both answer **401**. This closes **part 2 review I2**; the decision is below.
+- `CurrentUser`: reads `ICurrentUser.UserId` only from the `sub` claim of the authenticated principal. It throws `InvalidOperationException` with the value it got if that claim is missing or not a Guid. After `SubjectValidatingJwtEvents` that can't happen in a request, but the class doesn't rely on it.
+
+**Users and persistence (`Users/`, `Data/`):**
+- `IUserRepository.ExistsAsync` and `EfUserRepository`, a single `AnyAsync` on the primary key.
+- `DatabaseOptions` and `PersistenceSetup.AddPersistence()`:
+  - the connection string comes from `ConnectionStrings:TaskManagement` and is **validated at startup** (it must not be blank). The message names the setting but never the value, because a connection string can hold a password;
+  - registers `DbContext` (SQL Server), `ITaskRepository` → `EfTaskRepository` and `IUserRepository` → `EfUserRepository`, all scoped.
+- `DesignTimeDbContextFactory` (**part 3 review 4**): `dotnet ef` now reads `ConnectionStrings:TaskManagement` from the API project's **user secrets** or the `ConnectionStrings__TaskManagement` environment variable, and falls back to the non-connecting placeholder only when neither is set. `migrations add` needs no database, so the fallback is enough there. Nothing secret is committed. The logic is in `Create(IConfiguration)` so it can be tested without touching user secrets or the environment.
+
+**HTTP (`Http/`, a folder the prompt's tree doesn't have):**
+- `HttpSetup.AddApiControllers()`: controllers and JSON options.
+  - `JsonStringEnumConverter(allowIntegerValues: false)`: enums are written as names, and numbers are rejected on input, including numeric strings such as `"2"`.
+  - `AllowInputFormatterExceptionMessages = false`, so JSON errors never echo serializer or exception text.
+- `EnumNameModelBinder` and its provider, inserted first. Query values such as `?status=` bind by **name only** (case-insensitive), so `?status=2` and `?status=99` are rejected the same way numbers in JSON are. ASP.NET's default enum binding would accept `2` as `Done`.
+
+**Errors (`Errors/`):**
+- `ErrorHandlingSetup`: `AddProblemDetails()`, plus `ApiBehaviorOptions.InvalidModelStateResponseFactory = ValidationProblemResponse.Create`.
+  - Outside Development: `UseExceptionHandler()` writes an RFC 9457 500 with no exception details.
+  - In Development the default developer exception page shows the details.
+  - `UseStatusCodePages()` gives problem bodies to the empty 401s from the bearer challenge and to the 404s for unknown routes.
+- `ValidationProblemResponse`: builds the 400 `ValidationProblemDetails` with every key turned into its camelCase field name.
+  - `$.status` → `status`, `$.dueDate` → `dueDate`, `Page` → `page`, `PageSize` → `pageSize`.
+  - It drops the "The request field is required." entry that ASP.NET adds under the body parameter's name whenever a field fails JSON conversion.
+  - The controller also uses it for the service's own validation errors, so every 400 has the same shape.
+
+**Tasks (`Tasks/`):**
+- `TasksController` (`api/tasks`, `{id:guid}` routes): binds the request, calls `TaskService`, maps `TaskResult`. It contains no rules and no EF, and it gets the user only through the service's `ICurrentUser`.
+
+  | Result | GET list / GET one | POST | PUT | DELETE |
+  |---|---|---|---|---|
+  | Success | 200 | 201 + `Location` | 200 | 204 |
+  | ValidationFailed | 400 ValidationProblemDetails | 400 | 400 | — |
+  | NotFound | — / 404 ProblemDetails (title "Task not found") | — | 404 | 404 |
+
+  The 404 is the same for a missing task and for another user's task. Unknown or non-Guid ids in the route get the router's 404.
+- `TasksSetup.AddTasks()` registers `TaskService`.
+
+**Package:** the API now references `Microsoft.AspNetCore.Authentication.JwtBearer` (10.0.9, version already in `Directory.Packages.props`).
+
+**Tests:**
+- Infrastructure:
+  - `Integration/TestTokens.cs`: mints tokens with `JsonWebTokenHandler` (valid, expired, other key, unsigned, other issuer, other audience, any `sub`, no `sub`).
+  - `Integration/ApiFactory.cs`: adds a non-connecting default connection string for host-only tests, `ApiFactory.For(database, replaceServices)` and `CreateClientFor(userId)`.
+  - `Integration/Http/TwoUserApi.cs`: a migrated database with two seeded users and a client for each.
+  - `Integration/Http/ApiJson.cs`: reads JSON and ProblemDetails and checks status and `application/problem+json`.
+- `Integration/Http/AuthenticationTests.cs` (14):
+  - **401** for no token, expired, other key, unsigned, other issuer, other audience, non-Guid `sub` (`not-a-guid`, `12345`, `""`), no `sub`, and **a Guid `sub` with no user row** on GET and on POST (the POST stores nothing);
+  - a positive control: 200 for a valid token of an existing user, so the 401s can't be vacuous.
+- `Integration/Http/TaskOwnershipTests.cs` (6):
+  - user B gets **404** on GET, PUT and DELETE of A's task, with the same title, type and set of fields as the 404 for a task that doesn't exist;
+  - after B's PUT and DELETE, A's task is unchanged and still there;
+  - B's list (with or without `?status=`) never contains A's tasks;
+  - a POST body that names A as `userId` or `ownerId` still creates B's task.
+- `Integration/Http/TaskValidationTests.cs` (23): **400** with exactly the expected camelCase field keys for:
+  - POST: missing or blank title, title of 201, description of 2001, an invalid `dueDate`, and two errors at once;
+  - PUT: **unknown status** `"Archived"`, **numeric status** `2`, numeric string `"2"`, missing status, empty title, an invalid `dueDate`;
+  - list: `status=Archived|2|99`, `page=0|-3|abc|21474838 (with pageSize 100)`, `pageSize=0|101|ten`;
+  - the numeric-status error message shows no serializer text (`System.`, `Path:`, `LineNumber`).
+- `Integration/Http/TaskCrudTests.cs` (10):
+  - **POST → 201** with `Location: /api/tasks/{id}`. The body has exactly the camelCase fields `id, title, description, status, dueDate, createdAt, updatedAt`, a trimmed title, a blank description stored as null, status `"Todo"` even when the body says `"Done"`, and `dueDate` `"2026-12-01"`.
+  - GET on `Location` returns the same JSON.
+  - **Full CRUD round trip:** create → list → PUT → GET equals the PUT response → DELETE 204 → GET 404 → a second DELETE 404 → empty list.
+  - **PUT twice** with the same body gives the same representation.
+  - Paged list shape (`items, page, pageSize, totalCount`) in due-date order, no date last, across two pages; defaults page 1 / size 20; status filter (`Done` and `done`).
+  - **The PUT/DELETE race (part 3 review 2) → 404**, through a test-only `RowDeletedBeforeUpdateTaskRepository` that deletes the row inside the same request, after the find and before the save.
+  - A non-Guid id in the route → 404 ProblemDetails.
+- `Integration/Http/ErrorHandlingTests.cs` (1): an unhandled exception (a test-only `ThrowingTaskRepository`) in the `Testing` environment → **500** `application/problem+json` without the exception message, the exception type or a stack frame.
+- `Unit/CurrentUserTests.cs` (4) and `Unit/DesignTimeDbContextFactoryTests.cs` (2).
+- `Integration/AppStartupTests.cs`:
+  - **changed** the part 1 smoke test: `Start_WithValidJwtSettings_ServesHttpRequests` (expected 404 for `/no-such-endpoint`) became `Start_WithValidSettings_AnswersAnonymousRequestWith401`, because the fallback policy now protects unknown paths too;
+  - added `Start_WithoutConnectionString_FailsOptionsValidation` (empty and blank).
+
+**Decision for part 2 review I2 (a Guid `sub` with no `Users` row): 401 at token validation, as planned.**
+- **Why 401:** the token is genuine, but it does not identify a known user of this API, which is an authentication failure, not an authorization one. A 403 would say "we know who you are, you may not do this".
+- **Alternatives rejected:**
+  - Creating the user on first use: `User` belongs to whatever system issues the tokens, and the prompt says it already exists.
+  - Mapping the FK error 547 on insert: this only covers POST. A GET by the same caller would quietly return an empty list, and the error would come from an exception rather than a rule.
+- **Cost:** one primary-key lookup per authenticated request.
+
+### Red 1 — tests written, no implementation
+
+Command (from `generative-ai-tools/`): `dotnet test`
+
+Distinct errors, counted (MSBuild duplicates and the path prefix trimmed):
+
+```
+      4 error CS0246: O nome do tipo ou do namespace "CurrentUser" não pode ser encontrado
+      3 error CS0619: "Assert.Throws<T>(Func<Task>)" é obsoleto: "You must call Assert.ThrowsAsync<T> (and await the result) when testing async code."
+      2 error CS1929: "DesignTimeDbContextFactory" não contém uma definição para "Create" ...
+      1 error CS0117: "DesignTimeDbContextFactory" não contém uma definição para "MigrationsOnlyConnectionString"
+Falha na compilação com o código de saída: 1.
+```
+
+Expected reason: `CurrentUser` and the factory's `Create`/`MigrationsOnlyConnectionString` do not exist. The three `CS0619` errors follow from the missing type. With `currentUser` of an unknown type, the compiler can't tell what `() => currentUser.UserId` returns, so it picks the `Assert.Throws(Func<Task>)` overload. Once `CurrentUser` exists they go away without any change to the test. The HTTP tests use only `HttpClient`, so they compiled already. Their red is in red 2.
+
+### Red 2 — stubs for the two missing types, nothing else
+
+- `CurrentUser` returns `Guid.Empty`.
+- `DesignTimeDbContextFactory.Create(configuration)` ignores the configuration and uses the placeholder.
+- There is no controller, no authentication and no error handling yet.
+
+Command: `dotnet test`
+
+```
+Integration.AppStartupTests.Start_WithValidSettings_AnswersAnonymousRequestWith401 => Assert.Equal() Failure: Values differ
+Integration.AppStartupTests.Start_WithoutConnectionString_FailsOptionsValidation(connectionString: "   ") => Assert.Throws() Failure: No exception was thrown
+Integration.AppStartupTests.Start_WithoutConnectionString_FailsOptionsValidation(connectionString: "") => Assert.Throws() Failure: No exception was thrown
+Integration.Http.AuthenticationTests.GetTasks_ExpiredToken_Returns401 => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_GuidSubjectWithoutUserRow_Returns401 => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_SubjectThatIsNotAGuid_Returns401(subject: "") => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_SubjectThatIsNotAGuid_Returns401(subject: "12345") => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_SubjectThatIsNotAGuid_Returns401(subject: "not-a-guid") => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_TokenForAnotherAudience_Returns401 => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_TokenFromAnotherIssuer_Returns401 => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_TokenSignedWithAnotherKey_Returns401 => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_TokenWithoutSubject_Returns401 => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_UnsignedToken_Returns401 => Expected 401, got 404:
+Integration.Http.AuthenticationTests.GetTasks_ValidTokenOfExistingUser_Returns200 => Assert.Equal() Failure: Values differ
+Integration.Http.AuthenticationTests.GetTasks_WithoutToken_Returns401Problem => Expected 401, got 404:
+Integration.Http.AuthenticationTests.PostTask_GuidSubjectWithoutUserRow_Returns401AndStoresNothing => Expected 401, got 404:
+Integration.Http.ErrorHandlingTests.ListTasks_UnhandledExceptionOutsideDevelopment_Returns500ProblemWithoutExceptionDetails => Expected 500, got 404:
+Integration.Http.TaskCrudTests.GetTask_LocationOfCreatedTask_Returns200WithSameTask => Expected 201, got 404:
+Integration.Http.TaskCrudTests.ListTasks_PageOfCallersTasks_ReturnsPagedShapeInDueDateOrder => Expected 201, got 404:
+Integration.Http.TaskCrudTests.ListTasks_StatusFilter_ReturnsOnlyMatchingTasks(status: "Done") => Expected 201, got 404:
+Integration.Http.TaskCrudTests.ListTasks_StatusFilter_ReturnsOnlyMatchingTasks(status: "done") => Expected 201, got 404:
+Integration.Http.TaskCrudTests.ListTasks_WithoutPaging_UsesPageOneAndSize20 => Expected 200, got 404:
+Integration.Http.TaskCrudTests.PostTask_ValidBody_Returns201WithLocationAndNormalizedTodoTask => Expected 201, got 404:
+Integration.Http.TaskCrudTests.PutTask_SameBodyTwice_LeavesTheSameRepresentation => Expected 201, got 404:
+Integration.Http.TaskCrudTests.PutTask_TaskDeletedBetweenFindAndSave_Returns404 => Expected 201, got 404:
+Integration.Http.TaskCrudTests.Tasks_FullCrudRoundTrip_BehavesAsResource => Expected 201, got 404:
+Integration.Http.TaskCrudTests.UnknownRoute_WithValidToken_Returns404Problem => System.Text.Json.JsonReaderException : The input does not contain any JSON tokens. ...
+Integration.Http.TaskOwnershipTests.DeleteTask_OtherUsersTask_Returns404LikeMissingTaskAndKeepsIt => Expected 201, got 404:
+Integration.Http.TaskOwnershipTests.GetTask_OtherUsersTask_Returns404LikeMissingTask => Expected 201, got 404:
+Integration.Http.TaskOwnershipTests.ListTasks_OtherUsersTasks_AreNeverIncluded(path: "/api/tasks") => Expected 201, got 404:
+Integration.Http.TaskOwnershipTests.ListTasks_OtherUsersTasks_AreNeverIncluded(path: "/api/tasks?status=Todo") => Expected 201, got 404:
+Integration.Http.TaskOwnershipTests.PostTask_BodyNamingAnotherUser_IsOwnedByCaller => Expected 201, got 404:
+Integration.Http.TaskOwnershipTests.PutTask_OtherUsersTask_Returns404LikeMissingTaskAndLeavesItUnchanged => Expected 201, got 404:
+Integration.Http.TaskValidationTests.ListTasks_InvalidQuery_Returns400WithCamelCaseFieldError(... all 10 queries ...) => Expected 400, got 404:
+Integration.Http.TaskValidationTests.PostTask_InvalidBody_Returns400WithCamelCaseFieldErrors(... all 6 bodies ...) => Expected 400, got 404:
+Integration.Http.TaskValidationTests.PutTask_InvalidBody_Returns400WithCamelCaseFieldErrors(... all 6 bodies ...) => Expected 201, got 404:
+Integration.Http.TaskValidationTests.PutTask_NumericStatus_ErrorMessageDoesNotExposeSerializerDetails => Expected 201, got 404:
+Unit.CurrentUserTests.UserId_NoHttpContext_Throws => Assert.Throws() Failure: No exception was thrown
+Unit.CurrentUserTests.UserId_OnlyNameIdentifierClaim_IgnoresItAndThrows => Assert.Throws() Failure: No exception was thrown
+Unit.CurrentUserTests.UserId_SubjectClaimIsGuid_ReturnsIt => Assert.Equal() Failure: Values differ
+Unit.CurrentUserTests.UserId_SubjectNotAGuid_ThrowsNamingTheValue => Assert.Throws() Failure: No exception was thrown
+Unit.DesignTimeDbContextFactoryTests.Create_ConnectionStringConfigured_UsesIt => Assert.Equal() Failure: Strings differ
+Unit.DesignTimeDbContextFactoryTests.Create_NoConnectionString_UsesMigrationsOnlyPlaceholder => Assert.Equal() Failure: Strings differ
+
+Resumo da execução de teste: Falhou!
+  total: 148
+  falhou: 62
+  concluído com êxito: 86
+  duração: 22s 240ms
+```
+
+(One line per failing test, taken from the raw output; the 22 validation theory rows are collapsed into three lines. Every one of them said "Expected 400, got 404" or "Expected 201, got 404".) The 86 that passed are the 87 tests from parts 1–3 minus the changed smoke test. **All 61 new tests failed**, so none passed before its code existed.
+- The HTTP tests got 404 because no endpoint existed. Every 404 assertion in the ownership tests also checks the title "Task not found", so a 404 from routing could never satisfy them.
+- **Two of these reds were for the wrong reason.** `Create_NoConnectionString_UsesMigrationsOnlyPlaceholder` failed even though the stub returns exactly the placeholder: EF normalizes the connection string (`Server=` → `Data Source=`, `Database=` → `Initial Catalog=`), and my test compared the raw string. `Create_ConnectionStringConfigured_UsesIt` failed for the right reason, but its assertion had the same weakness. That was a bug in my tests, not a correct red. I changed both to compare `SqlConnectionStringBuilder(...).DataSource` and re-ran that class against the same stub:
+
+```
+dotnet test --project tests/TaskManagement.Tests --no-build -- --filter-class "TaskManagement.Tests.Unit.DesignTimeDbContextFactoryTests"
+com falha TaskManagement.Tests.Unit.DesignTimeDbContextFactoryTests.Create_ConnectionStringConfigured_UsesIt (481ms)
+  Expected: "from-user-secrets"
+  Actual:   "design-time-only"
+  total: 2
+  falhou: 1
+  concluído com êxito: 1
+```
+
+Now the configured test fails for the right reason. The placeholder test passes against the stub, since the stub's only behavior is the placeholder: it is the fallback case and it guards the other branch.
+
+### Green — and the three failures on the way
+
+The first build after the implementation failed, because I had forgotten the package reference:
+
+```
+Auth\JwtSetup.cs(2,43): error CS0234: O nome de tipo ou namespace "JwtBearer" não existe no namespace "Microsoft.AspNetCore.Authentication"
+(5 errors in total, all JwtBearer types)
+```
+
+I added `<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />` to the API project, and the build gave 0 warnings and 0 errors.
+
+**First test run: 28 failed, 120 passed.** Every 400 and 404 had `Content-Type: application/json`, not `application/problem+json`:
+
+```
+Expected: "application/problem+json"
+Actual:   "application/json"
+```
+
+The cause was my `[Produces("application/json")]` on the controller: it forces that media type on every result, problem results included. I removed it.
+
+**Second test run: 5 failed, 143 passed.** Every failure was a validator error on the list query:
+
+```
+ListTasks_InvalidQuery_Returns400WithCamelCaseFieldError(query: "?page=0", expectedKey: "page") => Expected: "page" / Actual: "Page"
+(same for ?page=-3, ?page=21474838&pageSize=100, ?pageSize=0 → "PageSize", ?pageSize=101)
+```
+
+The binding errors for the same fields (`?page=abc`, `?pageSize=ten`) were already `page` and `pageSize`, so my key conversion worked, but the service's errors did not reach it. `ModelStateDictionary` keys are case-insensitive, so `AddModelError("page", …)` lands in the `Page` entry that query binding created. Then `ValidationProblem(ModelState)`, and, as the next run showed, `ValidationProblem()` with no arguments too, built the problem without calling my `InvalidModelStateResponseFactory`. I didn't dig into which `ControllerBase` overload does what. The controller now calls `ValidationProblemResponse.Create(ControllerContext)` directly, which is explicit and doesn't depend on that.
+
+**Final:**
+
+Command: `dotnet build`
+
+```
+Compilação com êxito.
+    0 Aviso(s)
+    0 Erro(s)
+```
+
+Command: `dotnet format --verify-no-changes` → exit 0, no output.
+
+Command: `dotnet test`
+
+```
+Resumo da execução de teste: Aprovado!
+  total: 148
+  falhou: 0
+  concluído com êxito: 148
+  ignorados: 0
+  duração: 22s 118ms
+```
+
+Design-time connection check (part 3 review 4). Neither command opens a connection:
+
+```
+$ ConnectionStrings__TaskManagement="Server=example-db-host;Database=TaskManagementCheck;User Id=x;Password=not-a-real-secret;TrustServerCertificate=true" dotnet ef dbcontext info --project src/TaskManagement.Api
+Provider name: Microsoft.EntityFrameworkCore.SqlServer
+Database name: TaskManagementCheck
+Data source: example-db-host
+
+$ dotnet ef dbcontext info --project src/TaskManagement.Api
+Database name: TaskManagement
+Data source: design-time-only
+
+$ dotnet ef migrations has-pending-model-changes --project src/TaskManagement.Api
+No changes have been made to the model since the last migration.
+```
+
+Refactor: nothing beyond the fixes above. Every method is under 20 lines, and the controller's only branching is the `TaskResult` switch.
+
+### Prompt cases, each with its test
+
+| Prompt case | Test(s) |
+|---|---|
+| no token → 401 | `AuthenticationTests.GetTasks_WithoutToken_Returns401Problem` |
+| expired → 401 | `GetTasks_ExpiredToken_Returns401` |
+| wrong key → 401 | `GetTasks_TokenSignedWithAnotherKey_Returns401` (also unsigned, wrong issuer, wrong audience) |
+| non-Guid `sub` → 401 | `GetTasks_SubjectThatIsNotAGuid_Returns401` ×3, `GetTasks_TokenWithoutSubject_Returns401` |
+| Guid `sub` with no user (part 2 I2) → 401, not 500 | `GetTasks_GuidSubjectWithoutUserRow_Returns401`, `PostTask_GuidSubjectWithoutUserRow_Returns401AndStoresNothing` |
+| user B → 404 on GET / PUT / DELETE of A's task | `TaskOwnershipTests.GetTask_…`, `PutTask_…`, `DeleteTask_OtherUsersTask_Returns404LikeMissingTask…` (the same 404 as a missing task) |
+| B never sees A's task in the list | `ListTasks_OtherUsersTasks_AreNeverIncluded` ×2 |
+| 400 with camelCase field errors | `TaskValidationTests` (23 cases) |
+| unknown and numeric status | PUT `"Archived"`, `2`, `"2"`; list `?status=Archived`, `2`, `99` |
+| invalid paging | `?page=0`, `-3`, `abc`, overflow; `?pageSize=0`, `101`, `ten` |
+| create → 201 with `Location` | `TaskCrudTests.PostTask_ValidBody_Returns201WithLocationAndNormalizedTodoTask`, `GetTask_LocationOfCreatedTask_…` |
+| full CRUD round trip | `Tasks_FullCrudRoundTrip_BehavesAsResource` |
+| PUT idempotent | `PutTask_SameBodyTwice_LeavesTheSameRepresentation` |
+| PUT/DELETE race (part 3 review 2) → 404, not 500 | `PutTask_TaskDeletedBetweenFindAndSave_Returns404` |
+| no stack traces or exception messages outside Development | `ErrorHandlingTests.ListTasks_UnhandledExceptionOutsideDevelopment_…`, `PutTask_NumericStatus_ErrorMessageDoesNotExposeSerializerDetails` |
+| design-time connection string, no secret committed (part 3 review 4) | `DesignTimeDbContextFactoryTests` ×2 and the `dotnet ef dbcontext info` check above |
+
+### Unsure / for the human
+
+- **There is a new folder, `Http/`,** for the JSON setup and the enum model binder. The prompt's tree has no place for code that is HTTP but neither errors nor tasks.
+- **Query enum values are case-insensitive** (`?status=done` works), the same as `JsonStringEnumConverter` on input. Output always uses the exact name.
+- **No user secrets were set** on this machine for the API project (`dotnet ef dbcontext info` fell back to the placeholder). To run the API in Development you need `dotnet user-secrets set Jwt:SigningKey <32+ bytes> --project src/TaskManagement.Api` and `dotnet user-secrets set ConnectionStrings:TaskManagement "<connection string>" --project src/TaskManagement.Api`. The README with run instructions is part 5's job, if one is wanted.
+- **Each HTTP test gets its own database and host** (about 22 s for 148 tests). That keeps tests independent at the cost of time.
+- **The user-existence check means one extra query per request.** A short cache would remove it, but then a deleted user would keep access for the cache's lifetime. At this size I chose correctness.
+- **Development shows exception details** (the default developer exception page). That is allowed by "outside Development". No test covers Development.
+
+## Part 4 — review
+
+A fresh `general-purpose` subagent with no memory of the work got the prompt (`prompts/01-generate.md`), the part number, the Part 4 file list and this log. It was told to re-run build, test and format itself, to try to break the API, to check the red runs (including the two the log says failed for the wrong reason), to grade its findings, and to edit nothing.
+
+### Reviewer's report (as it came)
+
+#### Part 4 — HTTP and auth: independent review
+
+#### Commands re-run (from `C:\labs\lesson-organizer\generative-ai-tools`)
+
+- `dotnet build` → `Compilação com êxito. 0 Aviso(s) 0 Erro(s)`
+- `dotnet test` → `Resumo da execução de teste: Aprovado! total: 148, falhou: 0, concluído com êxito: 148, ignorados: 0, duração: 21s 359ms`
+- `dotnet format --verify-no-changes` → exit 0, no output
+- `dotnet ef dbcontext info --project src/TaskManagement.Api --no-build` → `Database name: TaskManagement / Data source: design-time-only` (no user secret is set on this machine, so the placeholder was used — expected)
+- `ConnectionStrings__TaskManagement="" dotnet ef dbcontext info ...` → `Database name: (empty) / Data source: (empty)` (see Minor 4)
+
+#### Red-run plausibility
+
+- **Counts:** Part 3 ended at 87. Part 4 adds 61 new tests (Authentication 13, Ownership 6, Validation 23, Crud 10, ErrorHandling 1, CurrentUser 4, DesignTimeFactory 2, AppStartup 2). 87 + 61 = 148. Red 2 shows 62 failed (61 new plus the changed smoke test) and 86 passed — consistent.
+- **Red 1 (compile errors)** is plausible: `CurrentUser`, `Create` and `MigrationsOnlyConnectionString` were missing. The CS0619 explanation holds: when the lambda's return type can't be inferred, the compiler picks the obsolete `Assert.Throws(Func<Task>)` overload.
+- **Red 2** failed for the stated reasons. The HTTP tests got 404 because no endpoint existed. `UnknownRoute_…` hit a `JsonReaderException` on an empty 404 body, since status-code pages weren't set up yet. The 404 assertions also check the title "Task not found", so a routing 404 couldn't satisfy them.
+- **The two "wrong reason" reds are honestly described.** `Create_NoConnectionString_UsesMigrationsOnlyPlaceholder` failed only because EF rewrites the connection string. I checked this indirectly: the EF SqlServer assembly in `bin/` references `SqlConnectionStringBuilder`, `set_ApplicationName` and the string "EFCore", which fits EF rebuilding the string (`Server=` → `Data Source=`). After the assertion was fixed to compare `DataSource`, the placeholder test passes against the stub — it never had a valid red. The log says so (see Minor 6). `Create_ConnectionStringConfigured_UsesIt` was re-run against the stub and failed for the right reason (`design-time-only` vs `from-user-secrets`).
+- **One claim without pasted output:** the log says "as the next run showed, `ValidationProblem()` with no arguments" also skipped `InvalidModelStateResponseFactory`, but that run's output isn't in the log. As I recall the framework source, the parameterless `ControllerBase.ValidationProblem()` *does* call `InvalidModelStateResponseFactory`. I couldn't verify this without reading outside the folder. It doesn't affect the code, which calls `ValidationProblemResponse.Create` explicitly.
+
+#### Findings
+
+#### Critical
+None.
+
+#### Important
+None.
+
+#### Minor
+
+1. **`src/TaskManagement.Api/Http/HttpSetup.cs:10` + `Http/EnumNameModelBinderProvider.cs:9` — the enum binder runs before every other binder and ignores the binding source.** `Insert(0, …)` puts it ahead of `BinderType`, `Services`, `Body` and `Header`, and the provider returns its binder for any enum without looking at `context.BindingInfo.BindingSource`. No current action is affected (request bodies are records deserialized by System.Text.Json, not by model binders).
+   *Failure scenario:* someone later adds `[FromHeader] TaskItemStatus status` or `[FromBody] TaskItemStatus status`. The header or body is silently ignored and the value is read from the query/route instead; with no `?status=`, the action receives null. Fix: return the binder only when the binding source is null, Query, Path or ModelBinding — or insert the provider just before `EnumTypeModelBinderProvider`.
+
+2. **`src/TaskManagement.Api/Auth/JwtSetup.cs:38-53` — `IncludeErrorDetails` keeps its default of `true`.** A rejected token's 401 carries `WWW-Authenticate: Bearer error="invalid_token", error_description="The audience 'some-other-api' is invalid"` (or "The token expired at '…'"), built from the exception. It's only framework text echoing the caller's own token back to them, so the risk is low — but it is exception-derived detail outside Development, which the prompt forbids. Fix: `bearer.IncludeErrorDetails = false` outside Development.
+
+3. **`src/TaskManagement.Api/Auth/SubjectValidatingJwtEvents.cs:20` — the user-existence check is a time-of-check/time-of-use race.** The user is checked at token validation, and the task is inserted later in the same request.
+   *Failure scenario:* an external system deletes the `Users` row between those two steps; the POST then hits FK error 547 → `DbUpdateException` → 500 instead of 401/404. The API can't delete users, so this is theoretical — the same window item (a) closed for the normal case.
+
+4. **`src/TaskManagement.Api/Data/DesignTimeDbContextFactory.cs:23-24` — an empty connection-string setting doesn't fall back.** `?? MigrationsOnlyConnectionString` only catches null, so a present-but-empty `ConnectionStrings__TaskManagement` (or user secret) flows through as `""` (verified above: empty data source).
+   *Failure scenario:* `dotnet ef database update` then fails with an unclear connection error instead of using the placeholder or a clear message. The runtime `PersistenceSetup` treats blank as invalid (`IsNullOrWhiteSpace`); the design-time factory should match. Separately: without any secret, `dotnet ef database update` tries to reach the host `design-time-only` and fails after a network timeout with a DNS/connection error. That's acceptable, but worth one line in the Part 5 run instructions.
+
+5. **`src/TaskManagement.Api/Properties/launchSettings.json` — the only profile is HTTP, with no `UseHttpsRedirection` or HSTS.** Bearer tokens travel in clear text in local runs. The prompt is silent on this, and it's fine behind a TLS-terminating proxy, but it's worth a note in Part 5 for a "production-quality" claim.
+
+6. **`generation-log.md` Part 4 "What was built" and Red 2 — two count/wording mistakes.** `AuthenticationTests.cs` is labelled "(14)" but has 13 tests (the Red 2 failure list also shows 13; the 61 total is correct). And "All 61 new tests failed, so none passed before its code existed" is contradicted a few lines later, where the log says the corrected placeholder test passes against the stub. That test is a test that passes before its code exists; the prompt asks for that to be stated as a finding, which it is, but the earlier sentence should be qualified.
+
+#### Carried items
+
+- **(a) Guid `sub` with no `Users` row → 401, not 500 — closed.** `SubjectValidatingJwtEvents` runs after signature, issuer, audience and lifetime pass, and calls `context.Fail` for a missing or non-Guid `sub` and for a Guid with no user row. Tests: `GetTasks_GuidSubjectWithoutUserRow_Returns401` and `PostTask_GuidSubjectWithoutUserRow_Returns401AndStoresNothing`. If the database is down, the exception propagates through JwtBearer's catch-and-rethrow and becomes a 500 ProblemDetails with no details — correct.
+- **(b) Task deleted between find and update → 404 — closed.** `EfTaskRepository.UpdateAsync` catches `DbUpdateConcurrencyException` and returns false; the service maps false to `NotFound`. `PutTask_TaskDeletedBetweenFindAndSave_Returns404` exercises the real EF update against a deleted row, end to end through the controller.
+- **(c) Design-time connection string with no secret committed — closed, apart from Minor 4.** The factory reads user secrets (`UserSecretsId` is in the csproj) and then environment variables; confirmed with `dotnet ef dbcontext info`. No committed file holds a signing key or a connection string with a password: `appsettings.json` has only `Issuer` and `Audience`, and the test key is test-only.
+
+#### Checked and fine
+
+- **Authentication:** `[Authorize]` on the controller plus a fallback policy requiring an authenticated user, so unknown paths get 401 when anonymous. Issuer, audience, lifetime and signing key are validated; only HS256 is accepted; a signed token is required (`alg: none` is rejected); an expiry is required; clock skew is 30 s. `MapInboundClaims = false`, so `sub` is read as `sub`. The token is read only from the `Authorization` header, never the query string. The user id comes only from `sub` through `ICurrentUser` (`CurrentUser` uses `FindFirst`, consistent with the event). A body carrying `userId`/`ownerId` is ignored, and tested. Tests cover no token, expired, wrong key, unsigned, wrong issuer, wrong audience, non-Guid `sub` (×3), missing `sub`, an unknown user, and a positive 200 control.
+- **Ownership:** user B gets 404 on GET, PUT and DELETE of user A's task — identical to the 404 for a missing task (title, type, set of fields) — and A's task is left unchanged. The list never includes another user's tasks. Validation runs before the lookup, so a 400 can't be used to tell whether a task exists.
+- **RESTful rules:** POST → 201 with `Location: /api/tasks/{id}` (`CreatedAtAction`), and the status is always `Todo` even if the body says `Done`. PUT replaces the whole task; a missing `status` is a 400; a PUT to a missing id is a 404 (no upsert); PUT is idempotent and tested. DELETE → 204, then 404 on repeat. The `{id:guid}` route constraint gives 404 for non-Guid ids.
+- **Enums:** JSON uses `JsonStringEnumConverter(allowIntegerValues: false)`, so `2` and `"2"` are rejected (both tested). In the query, the binder matches by name only; `?status=2`, `99` and `Archived` are rejected (tested). `TaskValidator.AddUndefinedStatusError` is a second guard against undefined values. Responses write enums as names.
+- **ProblemDetails:** `application/problem+json` for 400, 401, 404 and 500 (the tests check it). Field keys are camelCase, including JSON paths (`$.dueDate` → `dueDate`) and query keys (`PageSize` → `pageSize`); the extra error ASP.NET adds under the body parameter's name is dropped. `AllowInputFormatterExceptionMessages = false`. Outside Development, `UseExceptionHandler` returns a 500 with no message, type or stack, and the `Testing` environment exercises that path.
+- **Malformed input** (checked by reading the framework behavior, not by new tests): a literal `null` or empty body → 400 "A non-empty request body is required" (key mapped to `""`); an array body or deep nesting → 400; a wrong content type → 415 ProblemDetails; an unknown method → 405; a `page` that overflows `int` → binding 400. Large `page × pageSize` offsets are guarded (`OffsetExceedsInt`), and very large titles are bounded by the validator and Kestrel's body limit. None reaches the service.
+- **Paging:** `page ≥ 1`, `pageSize` 1–100 with a default of 20; response shape `items`/`page`/`pageSize`/`totalCount`; order is due date with no date last, then creation time, then id. All tested.
+- **Rules per kind of code:** the controller only maps `TaskResult` — no EF, no business rules. Entities never leave the API; only `TaskResponse` is returned. Options classes are used (`JwtOptions`, `DatabaseOptions`), both validated at startup, and the `DatabaseOptions` message never echoes the connection string. `Program.cs` is composition only.
+- **Tests:** names follow `Method_Scenario_Result`; fakes are named classes (`ThrowingTaskRepository`, `RowDeletedBeforeUpdateTaskRepository`, `FixedCurrentUser`, `FakeTaskRepository`); no mocking library; packages match the prompt.
+
+#### Not verified (would need code outside the folder or a new file)
+
+- Whether .NET 10's `JsonStringEnumConverter` accepts a comma-separated value such as `"Todo, InProgress"` for an enum that isn't `[Flags]`. If it does, it would combine to `InProgress` (0|1) and be accepted. Combinations that land on an undefined value are already caught by `AddUndefinedStatusError`.
+- The behavior of `ControllerBase.ValidationProblem()` described in the log (see Red-run plausibility).
+
+### Decisions
+
+| # | Finding | Decision |
+|---|---|---|
+| 1 | The enum binder ignores the binding source and runs first | **Fixed.** `EnumNameModelBinderProvider` now returns its binder only for an unspecified source, `Query`, `Path` or `ModelBinding`, and leaves `Header`, `Body`, `Form` and `Services` to the framework. Test first: `Unit/EnumNameModelBinderProviderTests.cs`, with a named `ModelBinderProviderContext` subclass (`EnumBindingProviderContext`) built on the real `EmptyModelMetadataProvider`. It checks the four name/value sources (binder returned), the four other sources (null) and a non-enum type (null). The four "other source" cases failed first (below). |
+| 2 | `IncludeErrorDetails` is true, so the 401 `WWW-Authenticate` echoes exception text | **Fixed**, set to `false` in every environment, Development included. Development debugging doesn't need it: the bearer handler logs the failure reason. Test first: `GetTasks_RejectedToken_ChallengeCarriesNoErrorDescription` (expired token: the challenge starts with `Bearer` and contains neither `error_description` nor "expired"). It failed first with `Sub-string found`. |
+| 3 | A user deleted between token validation and the insert → 500 | **Declined.** Users can't be deleted through this API (`User` has no endpoints). For this to happen, an external system would have to delete the row within the milliseconds of one request. Closing it would mean mapping FK error 547 in `AddAsync` to a result the service doesn't have a case for, which is code for a case the prompt rules out ("assume a User model exists"). If it ever happens, the client gets a clean 500 ProblemDetails with no details (`ErrorHandlingTests`), the request is not half-applied, and a retry gets a 401. |
+| 4 | A blank design-time connection string doesn't fall back | **Fixed**, the same rule as at runtime: `string.IsNullOrWhiteSpace(configured)` → placeholder. Test first: `Create_NoConnectionString_UsesMigrationsOnlyPlaceholder` became the theory `Create_NoOrBlankConnectionString_UsesMigrationsOnlyPlaceholder` (null, `""`, `"   "`). The `""` and `"   "` rows failed first. The "`database update` without a secret fails after a DNS timeout" note goes into part 5's run instructions. |
+| 5 | Only an HTTP launch profile; no HTTPS redirection or HSTS | **Deferred to part 5**, as a note in the final list. TLS for an API like this usually ends at a reverse proxy or platform ingress. `UseHttpsRedirection` behind such a proxy needs forwarded-headers setup to work at all, and HSTS belongs to the proxy that serves the certificate. The local `http` profile is for development only. I won't add an `https` profile without an agreed certificate setup. |
+| 6 | Log counts and wording | **Fixed in this section, not by rewriting the Part 4 entry.** `AuthenticationTests` had **13** tests at red 2 / first green, not 14 (14 now, with the decision 2 test). And "All 61 new tests failed, so none passed before its code existed" is true **of red 2 as it ran**. After the placeholder assertion was corrected, that one test passes against the stub, so **one** new Part 4 test passed before its code existed, as the same entry says a few lines later. |
+| — | Not verified: comma-separated enum values in JSON | **Tested, and it was a real bug. Fixed.** I added `"status":"Todo, InProgress"` to the PUT theory and `?status=Todo,InProgress` to the query theory. The PUT returned **200 and stored `InProgress`** (Todo = 0 \| InProgress = 1, so the validator's undefined-value guard can't catch it): `JsonStringEnumConverter` parses flag syntax even for an enum that isn't `[Flags]`. The query case already passed, because `EnumNameModelBinder` matches whole names. Fix: `Http/EnumNameJsonConverter.cs`, a small `JsonConverter<TEnum>` and factory that read only a JSON string equal (ignoring case) to one of the names. Numbers, numeric strings and combinations all throw `JsonException`, which becomes a `status` field error with no serializer text, and the converter writes the name. It replaces `JsonStringEnumConverter`. The name matching is shared with the query binder (`Http/EnumNames.cs`), so both inputs follow one rule. |
+| — | Not verified: "`ValidationProblem()` with no arguments also skipped the factory" | **The evidence is the saved run.** That was the third test run of the green phase: I changed `return ValidationProblem(ModelState);` to `return ValidationProblem();`, then ran `dotnet build` (0 warnings, 0 errors) and `dotnet test` in the same command. The raw output, still saved locally, ends in `Resumo da execução de teste: Falhou! total: 148` with exactly 5 `com falha` lines, the same five list-query tests: `Expected: "page"` / `Actual: "Page"` (and `PageSize`). If the parameterless overload had called my factory, those keys would have been camelCase, as they are for binding errors. Why it didn't, I didn't investigate; the reviewer's memory of the framework may be from another version. The code no longer depends on it. |
+
+### Red for the fixes
+
+The new and changed tests were added first: decisions 1, 2 and 4, plus the comma-separated status cases. A nullability error in the new provider test (`CS8625`, a `null` in `TheoryData<string>`) stopped the first build. That was my test, not a result, so I replaced the `null` with a `"None"` id.
+
+Command: `dotnet test`
+
+```
+Integration.Http.AuthenticationTests.GetTasks_RejectedToken_ChallengeCarriesNoErrorDescription =>   Assert.DoesNotContain() Failure: Sub-string found
+Integration.Http.TaskValidationTests.PutTask_InvalidBody_Returns400WithCamelCaseFieldErrors(body: "{\"title\":\"Title\",\"status\":\"Todo, InProgress\"}", expectedKeys: ["status"]) =>   Expected 400, got 200: {"id":"74c46f89-b4b2-4c3c-b1f8-fc954a51cec7","title":"Title","description":null,"status":"InProgress","dueDate":null,"createdAt":"2026-11-11T16:43:14.0441845+00:00","updatedAt":"2026-11-11T16:43:14.0791294+00:00"}
+Unit.DesignTimeDbContextFactoryTests.Create_NoOrBlankConnectionString_UsesMigrationsOnlyPlaceholder(configured: "   ") =>   Assert.Equal() Failure: Strings differ
+Unit.DesignTimeDbContextFactoryTests.Create_NoOrBlankConnectionString_UsesMigrationsOnlyPlaceholder(configured: "") =>   Assert.Equal() Failure: Strings differ
+Unit.EnumNameModelBinderProviderTests.GetBinder_EnumFromOtherSource_LeavesItToTheFrameworkBinders(bindingSourceId: "Body") =>   Assert.Null() Failure: Value is not null
+Unit.EnumNameModelBinderProviderTests.GetBinder_EnumFromOtherSource_LeavesItToTheFrameworkBinders(bindingSourceId: "Form") =>   Assert.Null() Failure: Value is not null
+Unit.EnumNameModelBinderProviderTests.GetBinder_EnumFromOtherSource_LeavesItToTheFrameworkBinders(bindingSourceId: "Header") =>   Assert.Null() Failure: Value is not null
+Unit.EnumNameModelBinderProviderTests.GetBinder_EnumFromOtherSource_LeavesItToTheFrameworkBinders(bindingSourceId: "Services") =>   Assert.Null() Failure: Value is not null
+  total: 162
+  falhou: 8
+  concluído com êxito: 154
+  duração: 23s 258ms
+```
+
+All eight fail for the reasons in the findings. The new tests that passed here, and why:
+- the 4 "name/value source" rows and `GetBinder_NonEnumType_ReturnsNull`: these are the behavior to keep, which the old provider already had;
+- the `null` row of the design-time theory: the old `??` already handled null;
+- `?status=Todo,InProgress`: the query binder already matched whole names, so only JSON had the bug.
+
+### Green after the fixes
+
+Changes:
+- `EnumNameModelBinderProvider` checks the binding source.
+- `bearer.IncludeErrorDetails = false`.
+- `DesignTimeDbContextFactory` uses `IsNullOrWhiteSpace`.
+- `EnumNameJsonConverter`/`Factory` replace `JsonStringEnumConverter`.
+- `EnumNames` is shared by the converter and the binder.
+
+Command: `dotnet build`
+
+```
+Compilação com êxito.
+    0 Aviso(s)
+    0 Erro(s)
+```
+
+Command: `dotnet format --verify-no-changes` → exit 0, no output.
+
+Command: `dotnet test`
+
+```
+Resumo da execução de teste: Aprovado!
+  total: 162
+  falhou: 0
+  concluído com êxito: 162
+  ignorados: 0
+  duração: 22s 127ms
+```
+
+Carried to part 5:
+- the HTTPS note (decision 5);
+- the run instructions: user secrets for `Jwt:SigningKey` and `ConnectionStrings:TaskManagement`, and `dotnet ef database update` needing a real connection string (decision 4).
+
+Part 5 has not been started.
