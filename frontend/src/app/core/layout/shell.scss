@@ -1,0 +1,37 @@
+:host {
+  display: block;
+}
+
+.toolbar {
+  gap: 8px;
+}
+
+.brand {
+  color: inherit;
+  font: var(--mat-sys-title-large);
+  text-decoration: none;
+  margin-right: 16px;
+}
+
+.links {
+  display: flex;
+  gap: 4px;
+}
+
+.links .active {
+  background-color: var(--mat-sys-secondary-container);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.progress {
+  height: 4px;
+}
+
+.content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}

@@ -240,7 +240,7 @@ Each backend stage follows red → green → refactor, with the failing run and 
 Detailed, task-by-task plans live in `docs/plans/`, each written just before it is executed:
 1. [Backend core — stages 0–4](plans/2026-11-10-1-backend-core.md)
 2. [Backend API — stages 5–8](plans/2026-11-10-2-backend-api.md)
-3. Frontend — stages 9–11
+3. [Frontend — stages 9–11](plans/2026-11-10-3-frontend.md)
 4. Delivery — stage 12
 5. Security review — stage 13
 

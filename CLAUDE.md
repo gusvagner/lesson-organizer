@@ -69,7 +69,7 @@ lesson-organizer/
 │   ├── LessonOrganizer.Api.Tests/               # controller unit tests with named fakes
 │   └── LessonOrganizer.Api.IntegrationTests/    # WebApplicationFactory + SQL Server (Testcontainers)
 │
-└── frontend/                     # (planned) Angular app
+└── frontend/                     # Angular 22 app (Material); core/, shared/, features/ as in docs/frontend-architecture.md
 ```
 
 Dependency rule: `Api → Infrastructure → Application → Domain`, and `Api → Application`. Domain and Application must not reference ASP.NET Core, Identity or EF Core.
@@ -112,6 +112,11 @@ Reusable prompts go in `docs/ai/prompts/NN-short-title.md`.
 | Format | `dotnet format` |
 | Restore local tools | `dotnet tool restore` |
 | Add a migration | `dotnet ef migrations add <Name> --project src/LessonOrganizer.Infrastructure --output-dir Persistence/Migrations` |
+| Install frontend packages | `cd frontend && npm ci` |
+| Frontend tests | `cd frontend && npx ng test --watch=false` |
+| Frontend build | `cd frontend && npx ng build` |
+| Frontend format | `cd frontend && npx prettier --write src` |
+| Run frontend (needs the API on https://localhost:7141) | `cd frontend && npm start` → `http://localhost:4200`, `/api` proxied to the API |
 | Database for development | `docker compose up -d db` (copy `.env.example` to `.env` first) |
 | Connection string for development | `dotnet user-secrets set ConnectionStrings:LessonOrganizer "Server=127.0.0.1,1433;Database=LessonOrganizer;User Id=sa;Password=<.env value>;TrustServerCertificate=true" --project src/LessonOrganizer.Api` |
 | Run API (applies migrations and seeds demo data in Development) | `dotnet run --project src/LessonOrganizer.Api --launch-profile https` → `https://localhost:7141`, API docs at `https://localhost:7141/scalar` |

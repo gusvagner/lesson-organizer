@@ -1,0 +1,37 @@
+<mat-toolbar class="toolbar">
+  @if (viewport.handset()) {
+    <button mat-icon-button [matMenuTriggerFor]="navMenu" aria-label="Open navigation">
+      <mat-icon>menu</mat-icon>
+    </button>
+    <mat-menu #navMenu="matMenu">
+      <a mat-menu-item routerLink="/lesson-plans">Lesson plans</a>
+      <a mat-menu-item routerLink="/students">Students</a>
+    </mat-menu>
+  }
+  <a class="brand" routerLink="/lesson-plans">Lesson Organizer</a>
+  @if (!viewport.handset()) {
+    <nav class="links">
+      <a mat-button routerLink="/lesson-plans" routerLinkActive="active">Lesson plans</a>
+      <a mat-button routerLink="/students" routerLinkActive="active">Students</a>
+    </nav>
+  }
+  <span class="spacer"></span>
+  <button mat-button class="user-menu" [matMenuTriggerFor]="userMenu">
+    <mat-icon>account_circle</mat-icon>
+    {{ auth.currentUser()?.name }}
+  </button>
+  <mat-menu #userMenu="matMenu">
+    <button mat-menu-item class="logout" (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Log out</span>
+    </button>
+  </mat-menu>
+</mat-toolbar>
+<div class="progress">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+</div>
+<main class="content">
+  <router-outlet />
+</main>

@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "db: up",
+      "type": "shell",
+      "command": "docker compose up -d db",
+      "problemMatcher": []
+    },
+    {
+      "label": "api: build",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/src/LessonOrganizer.Api/LessonOrganizer.Api.csproj"],
+      "dependsOn": "db: up",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "frontend: start",
+      "type": "npm",
+      "script": "start",
+      "path": "frontend",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": "$tsc",
+        "background": {
+          "activeBegins": true,
+          "beginsPattern": "Changes detected|Building",
+          "endsPattern": "Local:|bundle generation (complete|failed)"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+<header class="page-header">
+  <h1>Students</h1>
+  <a mat-flat-button routerLink="/students/new">
+    <mat-icon>add</mat-icon>
+    New student
+  </a>
+</header>
+
+<mat-form-field class="search-field">
+  <mat-label>Search by name</mat-label>
+  <mat-icon matPrefix>search</mat-icon>
+  <input matInput class="search" type="search" [formControl]="searchBox" />
+</mat-form-field>
+
+@if (loaded()) {
+  @if (store.students().length === 0) {
+    @if (searchTerm()) {
+      <lo-empty-state
+        icon="search_off"
+        message="No results"
+        actionLabel="Clear filters"
+        (action)="clearSearch()"
+      />
+    } @else {
+      <lo-empty-state
+        icon="school"
+        message="You have no students yet."
+        actionLabel="Add your first student"
+        (action)="addStudent()"
+      />
+    }
+  } @else if (viewport.handset()) {
+    <lo-student-cards
+      [students]="store.students()"
+      [saving]="store.saving()"
+      (remove)="remove($event)"
+    />
+  } @else {
+    <lo-student-table
+      [students]="store.students()"
+      [saving]="store.saving()"
+      (remove)="remove($event)"
+    />
+  }
+}

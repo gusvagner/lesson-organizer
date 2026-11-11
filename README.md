@@ -16,7 +16,14 @@ To be written in stage 12.
 
 ## Run it
 
-To be written in stage 12.
+The one-command Docker demo is written in stage 12. In development:
+
+1. `cp .env.example .env`, set the SQL Server password, then `docker compose up -d db`.
+2. Store the connection string once with `dotnet user-secrets` (see the Commands table in [CLAUDE.md](CLAUDE.md#commands)).
+3. `dotnet run --project src/LessonOrganizer.Api --launch-profile https` — applies migrations and seeds the demo data.
+4. `cd frontend && npm ci && npm start`, then open `http://localhost:4200`. The dev server proxies `/api` to `https://localhost:7141`, so the app and the API share one origin.
+
+In VS Code, steps 3 and 4 are one launch: Run and Debug → **API + Frontend** (F5). It starts the `db` container, builds and runs the API with the `https` profile, starts `ng serve` and opens Chrome at `http://localhost:4200`. Needs the C# extension.
 
 ## Demo credentials
 
@@ -31,7 +38,10 @@ Try: deleting Ana is refused because she has lesson plans; Carla can be deleted;
 
 ## Tests
 
-To be written in stage 12.
+- Backend: `dotnet test` (Docker must be running; the SQL Server tests start their own container).
+- Frontend: `cd frontend && npx ng test --watch=false` (Vitest).
+
+Full results are recorded in stage 12.
 
 ## Architecture
 
